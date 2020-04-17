@@ -1,0 +1,16 @@
+layer_type,layer_size,layer_activ,batch_size,min_delta,patience,early_stop,time_fit,valid_acc
+"dense,dense","2048,11","sigmoid,softmax",64,0.01,10,True,1134.5625,0.9647272825241088
+"dense,dense","1024,11","sigmoid,softmax",64,0.01,10,True,983.640625,0.9616363644599916
+"dense,dense,dense","512,16,11","sigmoid,sigmoid,softmax",64,0.01,10,True,827.21875,0.9587273001670836
+"dense,dense","512,11","sigmoid,softmax",64,0.01,10,True,529.65625,0.9580000042915344
+"dense,dense,dense","512,32,11","sigmoid,sigmoid,softmax",64,0.01,10,True,733.453125,0.9567272663116456
+"dense,dense","512,11","sigmoid,softmax",128,0.001,10,True,816.046875,0.951090931892395
+"dense,dense","512,11","sigmoid,softmax",128,0.01,10,True,344.15625,0.9476363658905028
+"dense,dense","512,11","relu,softmax",128,0.001,10,True,859.3125,0.9430909156799316
+"dense,dense","512,11","sigmoid,softmax",64,0.001,1,True,185.03125,0.9421818256378174
+"dense,dense","512,11","sigmoid,softmax",256,0.01,10,True,310.03125,0.9325454831123352
+"dense,dense","512,11","sigmoid,softmax",64,0.01,1,True,72.40625,0.9225454330444336
+"dense,dense","16,11","sigmoid,softmax",64,0.01,1,True,28.921875,0.8494545221328735
+"dense,dense","16,11","sigmoid,softmax",64,0.01,1,True,27.984375,0.8458181619644165
+"dense,dense","16,11","sigmoid,softmax",128,0.01,1,True,19.890625,0.8214545249938965
+"dense,dense","512,11","sigmoid,softmax",64,0.001,10,True,930.28125,0.9656363725662231
