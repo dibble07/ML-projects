@@ -106,7 +106,9 @@ def InputMove(board_in, col, player):
 	return board_in, flag_out
 
 def PlayGame(user_type_in, model, play_start):
-	board_out = np.zeros((6,7), dtype=int)
+	board_curr = np.zeros((6,7), dtype=int)
+	board_out = np.copy(board_curr)
+	move_out = []
 	cont=True
 	play_curr=play_start
 	if play_curr == 1:
@@ -116,22 +118,24 @@ def PlayGame(user_type_in, model, play_start):
 	while cont:
 		# make move
 		if user_type_in[play_curr] == 'User':
-			col_des = UserMoveInput(board_out, play_curr)
+			col_des = UserMoveInput(board_curr, play_curr)
 		elif user_type_in[play_curr] == 'Rand':
 			col_des = RandMoveInput()
 		elif user_type_in[play_curr] == 'RandSmart':
-			col_des = RandSmartMoveInput(board_out, play_curr)
+			col_des = RandSmartMoveInput(board_curr, play_curr)
 		elif user_type_in[play_curr] == 'NeuralNetwork':
-			col_des = NeuralNetworkMoveInput(board_out, model)
+			col_des = NeuralNetworkMoveInput(board_curr, model)
 		else:
 			print("No player type selected")
-		board_out, flag = InputMove(board_out, col_des, play_curr)
+		board_curr, flag = InputMove(board_curr, col_des, play_curr)
+		board_out = np.dstack((board_out,board_curr))
+		move_out.append((play_curr, col_des))
 		if flag == 0:
 			# if move out of bounds
 			cont=False
 			result=opp_curr
 		elif flag == 1:
-			win, full = BoardState(board_out)
+			win, full = BoardState(board_curr)
 			if win[1] == True and win[2] == False:
 				cont=False
 				result=1
@@ -143,4 +147,4 @@ def PlayGame(user_type_in, model, play_start):
 				result=0
 			else:
 				play_curr, opp_curr = opp_curr, play_curr
-	return board_out, result
+	return board_out, move_out, result

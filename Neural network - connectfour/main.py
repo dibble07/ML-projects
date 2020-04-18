@@ -23,7 +23,7 @@ def NeuralNetwork():
 def ManyGames(user_type_in, model_in, play_start):
 	outcome_tot={0:0, 1:0, 2:0}
 	for i in range(no_games):
-		__, game_result = connectfour.PlayGame(user_type_in, model_in, play_start)
+		__, __, game_result = connectfour.PlayGame(user_type_in, model_in, play_start)
 		outcome_tot[game_result]+=1
 	return outcome_tot
 
