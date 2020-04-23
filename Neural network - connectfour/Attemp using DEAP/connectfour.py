@@ -9,7 +9,7 @@ def UserMoveInput(board_in, player):
 	print(board_in)
 	col_acc=False
 	while col_acc == False:
-		col_str=sg.popup_get_text("Player {0}, make your move. [1-7]".format(player), 'Input')
+		col_str=sg.popup_get_text(f"Player {player}, make your move. [1-7]", 'Input')
 		try:
 			col_out=int(col_str)
 			if col_out>=1 and col_out<=7:
@@ -33,15 +33,15 @@ def RandSmartMoveInput(board_in, player):
 		board_copy = board_in.copy()
 		board_copy, flag = InputMove(board_copy, col, player)
 		if flag == 1:
-			win, __ = BoardState(board_copy, player)
-			if win:
+			win, __ = BoardState(board_copy)
+			if win[player]:
 				win_col[player].append(col)
 		# identify win blocking locations
 		board_copy = board_in.copy()
 		board_copy, flag = InputMove(board_copy, col, opposition)
 		if flag == 1:
-			win, __ = BoardState(board_copy, opposition)
-			if win:
+			win, __ = BoardState(board_copy)
+			if win[opposition]:
 				win_col[opposition].append(col)
 	if len(win_col[player]) > 0:
 		# if can win
@@ -60,38 +60,39 @@ def NeuralNetworkMoveInput(board_in, model):
 	play_2_bool = np.zeros(board_in.shape, dtype=int)
 	play_2_bool[board_in == 2] = 1
 	play_all_bool=np.dstack((play_1_bool,play_2_bool))
-	play_all_bool=play_all_bool.reshape(-1)
-	col_out_prob = model.activate(play_all_bool)
+	play_all_bool=play_all_bool.reshape(1,play_all_bool.shape[0],play_all_bool.shape[1],play_all_bool.shape[2])
+	col_out_prob = model.predict(play_all_bool)
 	col_out = np.argmax(col_out_prob)
+	# board_flat = board_in.reshape(-1,board_in.shape[0]*board_in.shape[1])
+	# col_out_prob = model.predict(board_flat)
 	return col_out
 
-def BoardState(board_in, player_in):
+def BoardState(board_in):
 	# is the board full1
 	full_out=all(board_in[0,:] != 0)
 	# has anyone won
 	board_sz = board_in.shape
-	winning_out=False
-	# if enough moves have been made for someone to win then check whether player_in has won
-	if len(np.nonzero(board_in.reshape(-1))[0]) >= 6:
+	winning_out={1: False, 2: False}
+	for cand in [1,2]:
 		for i_row in range(board_sz[0]):
 			for i_col in range(board_sz[1]):
 				if i_row <= board_sz[0]-4:
 					# check vertical direction
-					if all(np.equal(board_in[i_row:i_row+4,i_col], player_in)):
-						winning_out=True
+					if all(np.equal(board_in[i_row:i_row+4,i_col], cand)):
+						winning_out[cand]=True
 				if i_col <= board_sz[1]-4:
 					# check horizontal direction
-					if all(np.equal(board_in[i_row,i_col:i_col+4], player_in)):
-						winning_out=True
+					if all(np.equal(board_in[i_row,i_col:i_col+4], cand)):
+						winning_out[cand]=True
 				if i_row <= board_sz[0]-4 and  i_col <= board_sz[1]-4:
 					mat=board_in[i_row:i_row+4,i_col:i_col+4]
 					mat_fl=np.flip(mat, axis=0)
 					# check swinning_outheast diagonal direction
-					if all(np.equal(np.diagonal(mat), player_in)):
-						winning_out=True
+					if all(np.equal(np.diagonal(mat), cand)):
+						winning_out[cand]=True
 					# check swinning_outhwest diagonal direction
-					if all(np.equal(np.diagonal(mat_fl), player_in)):
-						winning_out=True		
+					if all(np.equal(np.diagonal(mat_fl), cand)):
+						winning_out[cand]=True		
 	return winning_out, full_out
 
 def InputMove(board_in, col, player):
@@ -132,15 +133,18 @@ def PlayGame(user_type_in, model, play_start):
 		if flag == 0:
 			# if move out of bounds
 			cont=False
-			winner=-play_curr
+			result=opp_curr
 		elif flag == 1:
-			win, full = BoardState(board_curr, play_curr)
-			if win == True:
+			win, full = BoardState(board_curr)
+			if win[1] == True and win[2] == False:
 				cont=False
-				winner=play_curr
+				result=1
+			elif win[1] == False and win[2] == True:
+				cont=False
+				result=2
 			elif full:
 				cont=False
-				winner=0
+				result=0
 			else:
 				play_curr, opp_curr = opp_curr, play_curr
-	return board_out, move_out, winner
+	return board_out, move_out, result
