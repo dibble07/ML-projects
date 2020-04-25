@@ -1,11 +1,18 @@
-import noughtscrosses
+import cargame
 import neat
 import os
 import visualize
 
 def EvalGenomes(genomes, config):
-    for genome_id, genome in genomes:
-        genome.fitness = ObjFun(neat.nn.FeedForwardNetwork.create(genome, config))
+	networks = []
+	for __, genome in genomes:
+		networks.append(neat.nn.FeedForwardNetwork.create(genome, config))
+	print(networks)
+	scores = PlayGame(networks, 0, 1)
+	print(scores)
+	for (__, genome), score in zip(genomes, scores):
+		genome.fitness = score
+
 
 def AddStats(p_in):
 	p_in.add_reporter(neat.StdOutReporter(True))
