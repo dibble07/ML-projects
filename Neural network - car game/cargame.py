@@ -184,10 +184,10 @@ def PlayGame(method_list, fin_pause, lap_targ):
 
 		# move car
 		for car in car_list:
+			x_move = 0
+			y_move = 0
 			if car.input_method is None:
 				keys = pygame.key.get_pressed()
-				x_move = 0
-				y_move = 0
 				if keys[pygame.K_LEFT]:
 					x_move = -1
 				elif keys[pygame.K_RIGHT]:
@@ -198,6 +198,8 @@ def PlayGame(method_list, fin_pause, lap_targ):
 					y_move = 1
 			else:
 				print("use the neural net")
+				hey = car.input_method.activate(car.sense_dist)
+				print(hey)
 			if any([i != 0 for i in [x_move, y_move]]) and not(car.finished):
 				car.move(x_move, y_move, track)
 
