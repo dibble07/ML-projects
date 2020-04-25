@@ -38,15 +38,17 @@ class player(object):
 		self.track_prog = 0
 		self.lap = 0
 		self.lap_targ = lap_targ
+		self.lap_float = min(self.lap + self.track_prog, self.lap_targ)
 		self.on_course = True
 		self.started = False
+		self.time_start = 0
 		self.finished = False
 		self.input_method = neural_network
 		self.sense_ang = sense_ang
 		self.sense(course)
 		img = pygame.image.load("car.png")
 		self.img = pygame.transform.scale(img, (self.hitbox.w,self.hitbox.h))
-		self.colour = (random.randint(0,256), random.randint(0,256), random.randint(0,256))
+		self.colour = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
 
 	def draw(self, win):
 		win.blit(self.img, (self.hitbox.x, self.hitbox.y))
@@ -98,8 +100,9 @@ class player(object):
 		if self.finished:
 			time_dur = self.time_dur
 		else:
-			time_dur = pygame.time.get_ticks()-self.time_start
-		score_out = -self.lap_float + time_dur/1000/60/60
+			time_dur = pygame.time.get_ticks() - self.time_start
+
+		score_out = self.lap_float - self.lap_targ - time_dur/1000/60/60
 		return score_out
 
 	def sense(self, course):
@@ -160,14 +163,14 @@ def RedrawGameWindow(win, course, player_list):
 			win.blit(text, (5, 25))
 	pygame.display.update()
 
-def PlayGame(method_list, fin_pause, lap_targ):
+def PlayGame(method_list, fin_pause, lap_targ, patience):
 
 	# initialise game
 	pygame.init()
 	win_sz = (600,400)
 	win = pygame.display.set_mode(win_sz)
 	clock = pygame.time.Clock()
-	sense_angle = np.linspace(0, 2*pi, num=8, endpoint = False)
+	sense_angle = np.linspace(0, 2*pi, num=4, endpoint = False)
 
 	# initialise components
 	track_init = [(100, 200), (200, 100), (500,100), (500, 300), (200, 300)]
@@ -175,17 +178,22 @@ def PlayGame(method_list, fin_pause, lap_targ):
 	car_sz = (16, 32)
 	car_list = [player(car_sz, sense_angle, track, lap_targ, neur_net) for neur_net in method_list]
 
+	# import time
+	# time.sleep(5)
+	# pygame.time.delay(5000)
+
 	# game loop
 	run = True
 	while run:
 
 		# maintain frame rate
-		clock.tick(15)
+		clock.tick(20)
 
-		# move car
+		# move cars
 		for car in car_list:
 			x_move = 0
 			y_move = 0
+			# get keyboard input
 			if car.input_method is None:
 				keys = pygame.key.get_pressed()
 				if keys[pygame.K_LEFT]:
@@ -197,9 +205,17 @@ def PlayGame(method_list, fin_pause, lap_targ):
 				elif keys[pygame.K_DOWN]:
 					y_move = 1
 			else:
-				print("use the neural net")
-				hey = car.input_method.activate(car.sense_dist)
-				print(hey)
+				# get neural netowrk input
+				pred_float = car.input_method.activate(car.sense_dist)
+				if pred_float[2] >= 0:
+					x_move = -1
+				elif pred_float[3] >= 0:
+					x_move = 1
+				if pred_float[0] >= 0:
+					y_move = -1
+				elif pred_float[1] >= 0:
+					y_move = 1
+			# move car
 			if any([i != 0 for i in [x_move, y_move]]) and not(car.finished):
 				car.move(x_move, y_move, track)
 
@@ -208,7 +224,7 @@ def PlayGame(method_list, fin_pause, lap_targ):
 			if event.type == pygame.QUIT:
 				run = False
 
-		if all([car.finished for car in car_list]):
+		if all([car.finished for car in car_list]) or pygame.time.get_ticks()/1000 > patience:
 			run = False
 	            
 		RedrawGameWindow(win, track, car_list)

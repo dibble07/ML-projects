@@ -1,18 +1,18 @@
 import cargame
 import neat
 import os
+import time
 import visualize
 
 def EvalGenomes(genomes, config):
 	networks = []
 	for __, genome in genomes:
 		networks.append(neat.nn.FeedForwardNetwork.create(genome, config))
-	print(networks)
-	scores = PlayGame(networks, 0, 1)
-	print(scores)
+	scores = cargame.PlayGame(networks, 2000, 1, 10)
+	# print(scores)
 	for (__, genome), score in zip(genomes, scores):
 		genome.fitness = score
-
+	# time.sleep(10)
 
 def AddStats(p_in):
 	p_in.add_reporter(neat.StdOutReporter(True))
@@ -22,7 +22,7 @@ def AddStats(p_in):
 
 # Load configuration
 local_dir = os.path.dirname(__file__)
-config_path = os.path.join(local_dir, 'neat_config')
+config_path = os.path.join(local_dir, 'neat_config incomplete')
 config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
 	neat.DefaultSpeciesSet, neat.DefaultStagnation,config_path)
 
