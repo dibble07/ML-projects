@@ -1,7 +1,6 @@
 from math import cos, sin, pi
 import numpy as np
 import pygame
-pygame.init()
 import random
 from shapely.geometry import Polygon, Point, LinearRing, LineString
 
@@ -39,14 +38,19 @@ def RedrawGameWindow():
 	pygame.display.update()
 
 class course(object):
-	def __init__(self,coords,track_width):
+	def __init__(self, coords, track_width):
+		# middle
 		self.middle_poly = Polygon(coords)
 		self.middle_lin = LinearRing(self.middle_poly.exterior.coords)
+		temp_coords = UniqueWrap([(int(np.round(x)), int(np.round(y))) for x,y in zip(*self.middle_poly.exterior.xy)])
+		self.middle_coords = temp_coords[::-1]
+		# inner
 		temp_poly = Polygon(self.middle_poly.buffer(track_width*-1).exterior, [self.middle_lin])
 		temp_coords = UniqueWrap([(int(np.round(x)), int(np.round(y))) for x,y in zip(*temp_poly.exterior.xy)])
 		self.inner_coords = temp_coords[::-1]
 		self.inner_poly = Polygon(self.inner_coords)
 		self.inner_lin = LinearRing(self.inner_poly.exterior.coords)
+		# outer
 		temp_poly = Polygon(self.middle_poly.buffer(track_width).exterior, [self.middle_lin])
 		temp_coords = UniqueWrap([(int(np.round(x)), int(np.round(y))) for x,y in zip(*temp_poly.exterior.xy)])
 		self.outer_coords = temp_coords[::-1]
@@ -58,13 +62,13 @@ class course(object):
 		pygame.draw.polygon(win, (0,0,0), self.inner_coords)
 
 class player(object):
-	def __init__(self, x, y, width, height, course):
-		self.hitbox = pygame.Rect(x, y, width, height)
+	def __init__(self, course):
+		self.hitbox = pygame.Rect(course.middle_coords[0], car_sz)
+		self.hitbox.center = course.middle_coords[0]
 		self.xvel = 5
 		self.yvel = 5
-		self.track_loc = (0, 0)
+		self.track_loc = course.middle_coords[0]
 		self.track_prog = 0
-		self.track_prog_prev = 0
 		self.lap = 0
 		self.on_course = True
 		self.started = False
@@ -77,9 +81,14 @@ class player(object):
 	def draw(self, win):
 		win.blit(self.img, (self.hitbox.x, self.hitbox.y))
 		pygame.draw.rect(win, self.colour, self.hitbox, 2)
-		for line in self.sense_lin:
-			if line is not None:
-				pygame.draw.line(win, self.colour, line[0], line[1], 2)
+		if self.finished:
+			font = pygame.font.SysFont('arial', 12, True)
+			text = font.render('{0:.3f}'.format(self.score()), True, (255, 0, 0)) 
+			win.blit(text, self.hitbox.center)
+		else:
+			for line in self.sense_lin:
+				if line is not None:
+					pygame.draw.line(win, self.colour, line[0], line[1], 2)
 		pygame.draw.circle(win, self.colour, self.track_loc, 5)
 
 	def move(self, x_unit, y_unit, course):
@@ -148,6 +157,7 @@ class player(object):
 		self.sense_lin = line_min
 
 # initialise game
+pygame.init()
 win_sz = (600,400)
 win_diag = (win_sz[0]**2 + win_sz[1]**2)**0.5
 win = pygame.display.set_mode(win_sz)
@@ -160,14 +170,15 @@ sense_angle = np.linspace(0, 2*pi, num=8, endpoint = False)
 # initialise components
 track_init = [(100, 200), (200, 100), (500,100), (500, 300), (200, 300)]
 track = course(track_init, 50)
-car_list = [player(100-16/2, 200-32/2, 16, 32, track), player(100-16/2, 200+32/2, 16, 32, track)]
+car_sz = (16, 32)
+car_list = [player(track), player(track)]
 
 # game loop
 run = True
 while run:
 
 	# maintain frame rate
-	clock.tick(25)
+	clock.tick(15)
 
 	# move car
 	keys = pygame.key.get_pressed()
