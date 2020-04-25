@@ -1,6 +1,3 @@
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 import numpy as np
 import pygame
 pygame.init()
@@ -132,7 +129,7 @@ lap_targ = 2
 run = True
 while run:
 
-	# clock something
+	# maintain frame rate
 	clock.tick(27)
 
 	# move car
@@ -149,11 +146,6 @@ while run:
 		y_move = 1
 	if any([i != 0 for i in [x_move, y_move]]) and car.on_course and not(car.finished):
 		car.move(x_move, y_move, track)
-
-	# quit game if car off course
-	# if not(car.on_course):
-	# 	pygame.time.wait(500)
-	# 	run = False
 
 	# quit game if desired
 	for event in pygame.event.get():
