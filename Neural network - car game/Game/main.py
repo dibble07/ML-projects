@@ -2,6 +2,7 @@ from math import cos, sin, pi
 import numpy as np
 import pygame
 pygame.init()
+import random
 from shapely.geometry import Polygon, Point, LinearRing, LineString
 
 def UniqueWrap(list_in):
@@ -14,22 +15,27 @@ def UniqueWrap(list_in):
 
 def RedrawGameWindow():
 	win.fill((0,0,0))
-	if not(car.first_move):
+	track.draw(win)
+	car_started_list = []
+	for car in car_list:
+		car.draw(win)
+		if car.started:
+			car_started_list.append(car)
+	if len(car_started_list) > 0:
+		car_best = car_list[np.argmin(np.array([car.score() for car in car_started_list]))]
 		font = pygame.font.SysFont('arial', 18)
-		if car.finished:
+		if car_best.finished:
 			time_curr = pygame.time.get_ticks()
-			text = font.render('Time: {0:.2f}'.format(car.time_dur/1000), True, (255, 255, 255)) 
+			text = font.render('Time: {0:.2f}'.format(car_best.time_dur/1000), True, (255, 255, 255)) 
 			win.blit(text, (5, 5))
-			text = font.render('Laps: {0:.2f}'.format(car.lap_float), True, (255, 255, 255)) 
+			text = font.render('Laps: {0:.2f}'.format(car_best.lap_float), True, (255, 255, 255)) 
 			win.blit(text, (5, 25)) 
 		else:
 			time_curr = pygame.time.get_ticks()
-			text = font.render('Time: {0:.2f}'.format((time_curr-car.time_start)/1000), True, (255, 255, 255)) 
+			text = font.render('Time: {0:.2f}'.format((time_curr-car_best.time_start)/1000), True, (255, 255, 255)) 
 			win.blit(text, (5, 5))
-			text = font.render('Laps: {0:.2f}'.format(car.lap_float), True, (255, 255, 255)) 
+			text = font.render('Laps: {0:.2f}'.format(car_best.lap_float), True, (255, 255, 255)) 
 			win.blit(text, (5, 25))
-	track.draw(win)
-	car.draw(win)
 	pygame.display.update()
 
 class course(object):
@@ -61,24 +67,25 @@ class player(object):
 		self.track_prog_prev = 0
 		self.lap = 0
 		self.on_course = True
-		self.first_move = True
+		self.started = False
 		self.finished = False
 		self.sense(course)
 		img = pygame.image.load("car.png")
 		self.img = pygame.transform.scale(img, (self.hitbox.w,self.hitbox.h))
+		self.colour = (random.randint(0,256), random.randint(0,256), random.randint(0,256))
 
 	def draw(self, win):
 		win.blit(self.img, (self.hitbox.x, self.hitbox.y))
-		pygame.draw.rect(win, (255,0,0), self.hitbox, 2)
+		pygame.draw.rect(win, self.colour, self.hitbox, 2)
 		for line in self.sense_lin:
 			if line is not None:
-				pygame.draw.line(win, (0,0,255), line[0], line[1], 2)
-		pygame.draw.circle(win, (0, 255, 0), self.track_loc, 5)
+				pygame.draw.line(win, self.colour, line[0], line[1], 2)
+		pygame.draw.circle(win, self.colour, self.track_loc, 5)
 
 	def move(self, x_unit, y_unit, course):
 		# save start time
-		if self.first_move:
-			self.first_move = False
+		if not(self.started):
+			self.started = True
 			self.time_start = pygame.time.get_ticks()
 		# save old track progress
 		self.track_prog_prev = self.track_prog
@@ -118,11 +125,10 @@ class player(object):
 
 	def sense(self, course):
 		x,y = self.hitbox.center
-		dist = sum(win_sz)
 		dist_min = []
 		line_min = []
 		for angle in sense_angle:
-			line_dir = LineString([(x, y), (x+dist*sin(angle), y+dist*cos(angle))])
+			line_dir = LineString([(x, y), (x+win_diag*sin(angle), y+win_diag*cos(angle))])
 			dist_angle_min = None
 			line_angle_min = None
 			track_lin_list = [course.outer_lin, course.inner_lin] 
@@ -143,6 +149,7 @@ class player(object):
 
 # initialise game
 win_sz = (600,400)
+win_diag = (win_sz[0]**2 + win_sz[1]**2)**0.5
 win = pygame.display.set_mode(win_sz)
 clock = pygame.time.Clock()
 
@@ -153,7 +160,7 @@ sense_angle = np.linspace(0, 2*pi, num=8, endpoint = False)
 # initialise components
 track_init = [(100, 200), (200, 100), (500,100), (500, 300), (200, 300)]
 track = course(track_init, 50)
-car = player(100-16/2, 200-32/2, 16, 32, track)
+car_list = [player(100-16/2, 200-32/2, 16, 32, track), player(100-16/2, 200+32/2, 16, 32, track)]
 
 # game loop
 run = True
@@ -174,8 +181,9 @@ while run:
 		y_move = -1
 	elif keys[pygame.K_DOWN]:
 		y_move = 1
-	if any([i != 0 for i in [x_move, y_move]]) and not(car.finished):
-		car.move(x_move, y_move, track)
+	for car in car_list:
+		if any([i != 0 for i in [x_move, y_move]]) and not(car.finished):
+			car.move(x_move, y_move, track)
 
 	# quit game if desired
 	for event in pygame.event.get():
