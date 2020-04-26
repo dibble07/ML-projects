@@ -6,7 +6,6 @@ import visualize
 
 print("""
 To do:
-	add turning not translating
 	add convex polygon
 	visualise network
 	deep Q learning
@@ -41,7 +40,7 @@ except:
 		neat.DefaultSpeciesSet, neat.DefaultStagnation,config_path)
 	p = neat.Population(config)
 p = AddStats(p)
-winner = p.run(EvalGenomes, 500)
+winner = p.run(EvalGenomes, 1500)
 print('Perfected by generation {0}'.format(checkpointer.last_generation_checkpoint))
 visualize.plot_stats(stats, ylog=False, view=True)
 
