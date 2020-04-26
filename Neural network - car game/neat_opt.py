@@ -4,6 +4,13 @@ import os
 import time
 import visualize
 
+print("""
+To do:
+	add convex polygon
+	add lap_count?
+	add turning not translating
+	""")
+
 def EvalGenomes(genomes, config):
 	networks = []
 	for __, genome in genomes:
@@ -20,12 +27,6 @@ def AddStats(p_in):
 
 # cargame.PlayGame([None], 1000, 1, 30)
 
-# Load configuration
-local_dir = os.path.dirname(__file__)
-config_path = os.path.join(local_dir, 'neat_config incomplete')
-config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
-	neat.DefaultSpeciesSet, neat.DefaultStagnation,config_path)
-
 # Initialise
 stats = neat.StatisticsReporter()
 checkpointer = neat.Checkpointer(1)
@@ -33,9 +34,13 @@ checkpointer = neat.Checkpointer(1)
 try:
 	p = neat.Checkpointer.restore_checkpoint('neat-checkpoint')
 except:
+	local_dir = os.path.dirname(__file__)
+	config_path = os.path.join(local_dir, 'neat_config incomplete')
+	config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+		neat.DefaultSpeciesSet, neat.DefaultStagnation,config_path)
 	p = neat.Population(config)
 p = AddStats(p)
-winner = p.run(EvalGenomes, 2)
+winner = p.run(EvalGenomes, 250)
 print('Perfected by generation {0}'.format(checkpointer.last_generation_checkpoint))
 visualize.plot_stats(stats, ylog=False, view=True)
 

@@ -191,7 +191,7 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 					y_move = 1
 			else:
 				# get neural netowrk input
-				neur_net_input = [dist / sum(win_sz) for dist in car.sense_dist]
+				neur_net_input = [dist/sum(win_sz) for dist in car.sense_dist] + [car.track_prog/lap_targ]
 				pred_float = car.input_method.activate(neur_net_input)
 				if pred_float[2] >= 0:
 					x_move = -1
