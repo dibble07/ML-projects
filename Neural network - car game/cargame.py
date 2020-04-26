@@ -41,8 +41,8 @@ class player(object):
 		self.lap_float = min(self.lap + self.track_prog, self.lap_targ)
 		self.on_course = True
 		self.started = False
-		self.time_start = 0
 		self.time_init = time_init
+		self.time_dur = 0
 		self.finished = False
 		self.input_method = neural_network
 		self.sense_ang = sense_ang
@@ -56,7 +56,7 @@ class player(object):
 		pygame.draw.rect(win, self.colour, self.hitbox, 2)
 		if self.finished:
 			font = pygame.font.SysFont('arial', 12, True)
-			text = font.render('{0:.3f}'.format(self.score()), True, (255, 0, 0)) 
+			text = font.render('{0:.3f}'.format(self.score), True, (255, 0, 0)) 
 			win.blit(text, self.hitbox.center)
 		else:
 			for line in self.sense_lin:
@@ -95,16 +95,15 @@ class player(object):
 		self.on_course = course.outer_poly.contains(car_poly) and not(course.inner_poly.intersects(car_poly))
 		if self.lap_float == self.lap_targ or not(self.on_course):
 			self.finished = True
-			self.time_dur = pygame.time.get_ticks() - self.time_init - self.time_start
 
-	def score(self):
-		if self.finished:
-			time_dur = self.time_dur
+	def frame(self, time_curr, patience):
+		if self.started:
+			self.time_dur = time_curr - self.time_start
 		else:
-			time_dur = pygame.time.get_ticks() - self.time_init - self.time_start
-
-		score_out = self.lap_float - self.lap_targ - time_dur/1000/60/60
-		return score_out
+			self.time_dur = 0
+		self.score = self.lap_float - self.lap_targ - self.time_dur/1000/60/60
+		if time_curr/1000 >= patience:
+			self.finished = True
 
 	def sense(self, course):
 		x,y = self.hitbox.center
@@ -139,25 +138,17 @@ def UniqueWrap(list_in):
 	out.append(out[0])
 	return out
 
-def RedrawGameWindow(win, course, player_list, time_init):
+def RedrawGameWindow(win, course, player_list, time_curr):
 	win.fill((0,0,0))
 	course.draw(win)
-	player_started_list = []
 	for player in player_list:
 		player.draw(win)
-		if player.started:
-			player_started_list.append(player)
-	if len(player_started_list) > 0:
-		max_lap = max([player.lap_float for player in player_started_list])
-		if all([player.finished for player in player_started_list]):
-			max_time = max([player.time_dur for player in player_started_list])
-		else:
-			max_time = pygame.time.get_ticks() - time_init
-		font = pygame.font.SysFont('arial', 18)
-		text = font.render('Time: {0:.2f}'.format(max_time/1000), True, (255, 255, 255)) 
-		win.blit(text, (5, 5))
-		text = font.render('Laps: {0:.2f}'.format(max_lap), True, (255, 255, 255)) 
-		win.blit(text, (5, 25)) 
+	max_lap = max([player.lap_float for player in player_list])
+	font = pygame.font.SysFont('arial', 18)
+	text = font.render('Time: {0:.2f}'.format(time_curr/1000), True, (255, 255, 255)) 
+	win.blit(text, (5, 5))
+	text = font.render('Laps: {0:.2f}'.format(max_lap), True, (255, 255, 255)) 
+	win.blit(text, (5, 25)) 
 	pygame.display.update()
 
 def PlayGame(method_list, fin_pause, lap_targ, patience):
@@ -167,8 +158,8 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 	win_sz = (600,400)
 	win = pygame.display.set_mode(win_sz)
 	clock = pygame.time.Clock()
-	time_init = pygame.time.get_ticks()
 	sense_angle = np.linspace(0, 2*pi, num=8, endpoint = False)
+	time_init = pygame.time.get_ticks()
 
 	# initialise components
 	track_init = [(100, 200), (200, 100), (500,100), (500, 300), (200, 300)]
@@ -182,12 +173,6 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 
 		# maintain frame rate
 		clock.tick(20)
-
-		# check if cars have exceed time limit
-		for car in car_list:
-			if (pygame.time.get_ticks() - car.time_init - car.time_start)/1000 > patience:
-				car.finished = True
-				car.time_dur = pygame.time.get_ticks() - car.time_init - car.time_start
 
 		# move cars
 		for car in car_list:
@@ -206,7 +191,8 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 					y_move = 1
 			else:
 				# get neural netowrk input
-				pred_float = car.input_method.activate(car.sense_dist)
+				neur_net_input = [dist / sum(win_sz) for dist in car.sense_dist]
+				pred_float = car.input_method.activate(neur_net_input)
 				if pred_float[2] >= 0:
 					x_move = -1
 				elif pred_float[3] >= 0:
@@ -219,17 +205,23 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 			if any([i != 0 for i in [x_move, y_move]]) and not(car.finished):
 				car.move(x_move, y_move, track)
 
-		# quit game if desired
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				run = False
+		# update time and score
+		time_frame = pygame.time.get_ticks() - time_init
+		for car in car_list:
+			if not(car.finished):
+				car.frame(time_frame, patience)
 
 		# check if any cars are not finished
 		if all([car.finished for car in car_list]):
 			run = False
+
+		# quit game if desired
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				run = False
 	            
-		RedrawGameWindow(win, track, car_list, time_init)
+		RedrawGameWindow(win, track, car_list, time_frame)
 
 	pygame.time.delay(fin_pause)
 	pygame.quit()
-	return [car.score() for car in car_list if car.input_method is not None]
+	return [car.score for car in car_list if car.input_method is not None]
