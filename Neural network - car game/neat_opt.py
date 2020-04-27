@@ -6,9 +6,8 @@ import visualize
 
 print("""
 To do:
-	visualise network
 	add convex polygon
-	deep Q learning - tf agent
+	deep Q learning - install (custom) tf and tf agent for py3.5
 	""")
 
 def EvalGenomes(genomes, config):
@@ -42,7 +41,8 @@ except:
 p = AddStats(p)
 winner = p.run(EvalGenomes, 100)
 print('Perfected by generation {0}'.format(checkpointer.last_generation_checkpoint))
-visualize.plot_stats(stats, ylog=False, view=True)
+visualize.plot_stats(stats, ylog=False, view=False)
+visualize.draw_net(config, winner, False, filename='architecture', fmt = 'png')
 
 # p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-{0}'.format(checkpointer.last_generation_checkpoint))
 # p = AddStats(p)
