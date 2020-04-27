@@ -7,8 +7,8 @@ reset_on_extinction    = True
 [DefaultGenome]
 # node activation options
 activation_default      = clamped
-activation_mutate_rate  = 0.2
-activation_options      = abs clamped cube gauss hat identity relu elu lelu selu sigmoid softplus tanh
+activation_mutate_rate  = 0.0
+activation_options      = clamped
 
 # node aggregation options
 aggregation_default     = sum

@@ -6,16 +6,16 @@ import visualize
 
 print("""
 To do:
-	add convex polygon
 	visualise network
-	deep Q learning
+	add convex polygon
+	deep Q learning - tf agent
 	""")
 
 def EvalGenomes(genomes, config):
 	networks = []
 	for __, genome in genomes:
 		networks.append(neat.nn.FeedForwardNetwork.create(genome, config))
-	scores = cargame.PlayGame(networks, 100, 1, 15)
+	scores = cargame.PlayGame(networks, 100, 2, 35)
 	for (__, genome), score in zip(genomes, scores):
 		genome.fitness = score
 
@@ -29,7 +29,7 @@ def AddStats(p_in):
 
 # Initialise
 stats = neat.StatisticsReporter()
-checkpointer = neat.Checkpointer(1)
+checkpointer = neat.Checkpointer(10)
 
 try:
 	p = neat.Checkpointer.restore_checkpoint('neat-checkpoint')
@@ -40,7 +40,7 @@ except:
 		neat.DefaultSpeciesSet, neat.DefaultStagnation,config_path)
 	p = neat.Population(config)
 p = AddStats(p)
-winner = p.run(EvalGenomes, 1500)
+winner = p.run(EvalGenomes, 100)
 print('Perfected by generation {0}'.format(checkpointer.last_generation_checkpoint))
 visualize.plot_stats(stats, ylog=False, view=True)
 

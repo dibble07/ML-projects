@@ -129,8 +129,9 @@ class player(object):
 		dist_min = []
 		line_min = []
 		dist = 1000
-		for angle in self.sense_ang:
-			line_dir = LineString([(x, y), (x+dist*sin(angle), y+dist*cos(angle))])
+		for ang_sense in self.sense_ang:
+			angle = (ang_sense+self.bear)/180*pi
+			line_dir = LineString([(x, y), (x+dist*sin(angle), y-dist*cos(angle))])
 			dist_angle_min = None
 			line_angle_min = None
 			track_lin_list = [course.outer_lin, course.inner_lin] 
@@ -166,7 +167,7 @@ def RotatePoints(origin, point_in, angle_deg):
 		cs = cos(angle_rad)
 		sn = sin(angle_rad)
 		xd = px - ox
-		yd = py - oy
+		yd = -(py - oy)
 		qx = ox + cs * xd - sn * yd
 		qy = oy + sn * xd + cs * yd
 		point_out.append((int(np.round(qx)), int(np.round(qy))))
@@ -192,7 +193,7 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 	win_sz = (600,400)
 	win = pygame.display.set_mode(win_sz)
 	clock = pygame.time.Clock()
-	sense_angle = np.linspace(0, 2*pi, num=8, endpoint = False)
+	sense_angle = np.linspace(0, 360, num=4, endpoint = False)
 	time_init = pygame.time.get_ticks()
 
 	# initialise components
@@ -206,7 +207,7 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 	while run:
 
 		# maintain frame rate
-		clock.tick(20)
+		clock.tick(15)
 
 		# move cars
 		for car in car_list:
@@ -260,4 +261,4 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 	pygame.quit()
 	return [car.score for car in car_list if car.input_method is not None]
 
-# PlayGame([None], 1000, 1, 30)
+# PlayGame([None], 1000, 1, 300)
