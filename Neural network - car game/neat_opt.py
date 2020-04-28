@@ -20,12 +20,14 @@ def PickleLoad(filename):
 	return out
 
 def EvalGenomes(genomes, config):
+	global gen_curr
 	networks = []
 	for __, genome in genomes:
 		networks.append(neat.nn.FeedForwardNetwork.create(genome, config))
-	scores = cargame.PlayGame(networks, 500, 2, 2)
+	scores = cargame.PlayGame(networks, "Generation: {0:1.0f}".format(gen_curr), 500, 2, 2)
 	for (__, genome), score in zip(genomes, scores):
 		genome.fitness = score
+	gen_curr +=1
 
 def AddStats(p_in):
 	p_in.add_reporter(neat.StdOutReporter(True))
@@ -48,6 +50,7 @@ except:
 	p = neat.Population(config)
 
 # Run optimisation
+gen_curr = 0
 p = AddStats(p)
 winner = p.run(EvalGenomes, 2)
 
@@ -62,4 +65,4 @@ PickleSave(winner, filename)
 # Load best genome and play game
 best_genome = PickleLoad(filename)
 best_net = [neat.nn.FeedForwardNetwork.create(best_genome, config)]
-cargame.PlayGame(best_net, None, 1000, None)
+cargame.PlayGame(best_net, "Best Genome", None, 1000, None)

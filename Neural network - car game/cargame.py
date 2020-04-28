@@ -101,7 +101,7 @@ class player(object):
 			self.time_dur = time_curr - self.time_start
 		else:
 			self.time_dur = 0
-		self.score = self.lap_float - self.lap_targ - self.time_dur/1000/60/60
+		self.score = self.lap_float - self.lap_targ - self.time_dur/1000/60/self.lap_float
 		if patience is not None:
 			if not(hasattr(self, 'score_max')):
 					self.score_max = self.score
@@ -195,19 +195,20 @@ def RedrawGameWindow(win, course, player_list, time_curr):
 	win.blit(text, (5, 25)) 
 	pygame.display.update()
 
-def PlayGame(method_list, fin_pause, lap_targ, patience):
+def PlayGame(method_list, win_str, fin_pause, lap_targ, patience):
 
 	# initialise game
 	pygame.init()
-	win_sz = (600,400)
+	pygame.display.set_caption(win_str)
+	win_sz = (600,600)
 	win = pygame.display.set_mode(win_sz)
 	clock = pygame.time.Clock()
-	sense_angle = np.linspace(-90, 90, num=8, endpoint = True)
+	sense_angle = np.linspace(-90, 90, num=5, endpoint = True)
 	time_init = pygame.time.get_ticks()
 
 	# initialise components
-	track_init = [(100, 200), (200, 100), (350, 180), (500,100), (500, 300), (200, 300)]
-	track = course(track_init, 40)
+	track_init = [(100, 400), (100, 200), (200, 100), (350, 180), (500,100), (500, 500), (400, 500), (400, 350), (300, 500), (100, 500)]
+	track = course(track_init, 25)
 	car_sz = (16, 32)
 	car_list = [player(car_sz, sense_angle, track, lap_targ, neur_net, time_init) for neur_net in method_list]
 
@@ -271,4 +272,4 @@ def PlayGame(method_list, fin_pause, lap_targ, patience):
 	pygame.quit()
 	return [car.score for car in car_list if car.input_method is not None]
 
-# PlayGame([None], 1000, 1, 5)
+# PlayGame([None], 'Test', 1000, 1, 5)
