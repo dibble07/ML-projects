@@ -40,7 +40,6 @@ def plot_stats(statistics, ylog=False, view=False, filename='avg_fitness.png'):
 
     plt.close()
 
-
 def plot_spikes(spikes, view=False, filename=None, title=None):
     """ Plots the trains for a single spiking neuron. """
     t_values = [t for t, I, v, u, f in spikes]
@@ -89,7 +88,6 @@ def plot_spikes(spikes, view=False, filename=None, title=None):
 
     return fig
 
-
 def plot_species(statistics, view=False, filename='speciation.png'):
     """ Visualizes speciation throughout evolution. """
     if plt is None:
@@ -113,7 +111,6 @@ def plot_species(statistics, view=False, filename='speciation.png'):
         plt.show()
 
     plt.close()
-
 
 def draw_net(config, genome, view=False, filename=None, node_names=None, show_disabled=True, prune_unused=False, node_colors=None, fmt='png'):
     """ Receives a genome and draws a neural network with arbitrary topology. """
