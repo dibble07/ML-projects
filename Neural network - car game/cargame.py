@@ -101,7 +101,7 @@ class player(object):
 			self.time_dur = time_curr - self.time_start
 		else:
 			self.time_dur = 0
-		self.score = self.lap_float - self.lap_targ - self.time_dur/1000/60/self.lap_float
+		self.score = self.lap_float - self.lap_targ# - self.time_dur/1000/60/self.lap_targ
 		if patience is not None:
 			if not(hasattr(self, 'score_max')):
 					self.score_max = self.score
@@ -207,8 +207,8 @@ def PlayGame(method_list, win_str, fin_pause, lap_targ, patience):
 	time_init = pygame.time.get_ticks()
 
 	# initialise components
-	track_init = [(100, 400), (100, 200), (200, 100), (350, 180), (500,100), (500, 500), (400, 500), (400, 350), (300, 500), (100, 500)]
-	track = course(track_init, 25)
+	track_init = [(100, 300), (100, 100), (200,100), (200,200), (300, 200), (300, 100), (500, 100), (500, 200), (400, 300), (500, 400), (500, 500), (200, 500), (200, 400)]
+	track = course(track_init, 35)
 	car_sz = (16, 32)
 	car_list = [player(car_sz, sense_angle, track, lap_targ, neur_net, time_init) for neur_net in method_list]
 

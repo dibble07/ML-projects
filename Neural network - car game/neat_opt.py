@@ -7,6 +7,7 @@ import pickle
 
 print("""
 To do:
+	Tweak sensing array
 	deep Q learning - install (custom) tf and tf agent for py3.5
 	""")
 
@@ -24,7 +25,7 @@ def EvalGenomes(genomes, config):
 	networks = []
 	for __, genome in genomes:
 		networks.append(neat.nn.FeedForwardNetwork.create(genome, config))
-	scores = cargame.PlayGame(networks, "Generation: {0:1.0f}".format(gen_curr), 500, 2, 2)
+	scores = cargame.PlayGame(networks, "Generation: {0:1.0f}".format(gen_curr), 500, 1, 2)
 	for (__, genome), score in zip(genomes, scores):
 		genome.fitness = score
 	gen_curr +=1
@@ -52,7 +53,7 @@ except:
 # Run optimisation
 gen_curr = 0
 p = AddStats(p)
-winner = p.run(EvalGenomes, 2)
+winner = p.run(EvalGenomes, 200)
 
 # Visualise results
 visualize.plot_stats(stats, ylog=False, view=False)
