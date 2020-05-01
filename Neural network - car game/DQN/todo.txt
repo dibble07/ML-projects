@@ -5,12 +5,8 @@ grip limits
 tyre degradation
 fuel use
 remaining laps
+race driver differences - sensing array, learning rate
 
 learning:
 convert pygame to dqn like environment
-multuple frames to learn time derivatives
-
-code:
-round pixels only for display purposes
-user tracked time steps
-convert to mx1 output size of combinations
+multiple frames to learn time derivatives

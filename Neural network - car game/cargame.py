@@ -222,10 +222,10 @@ def PlayGame(method_list, win_str, fin_pause, lap_targ, patience, show):
 
 		# move cars
 		for car in car_list:
-			bear_move = 0
-			for_move = 0
 			# get keyboard input
 			if car.input_method is None:
+				bear_move = 0
+				for_move = 0
 				keys = pygame.key.get_pressed()
 				if keys[pygame.K_LEFT]:
 					bear_move-=1
@@ -239,14 +239,35 @@ def PlayGame(method_list, win_str, fin_pause, lap_targ, patience, show):
 				# get neural netowrk input
 				neur_net_input = [dist/sum(win_sz) for dist in car.sense_dist]# + [car.track_prog/lap_targ]
 				pred_float = car.input_method.activate(neur_net_input)
-				if pred_float[2] >= 0:
-					bear_move-=1
-				if pred_float[3] >= 0:
-					bear_move+=1
-				if pred_float[0] >= 0:
-					for_move+=1
-				if pred_float[1] >= 0:
-					for_move-=1
+				move_comb = np.argmax(pred_float)
+				if move_comb == 0:
+					bear_move = -1
+					for_move = -1
+				elif move_comb == 1:
+					bear_move = -1
+					for_move = 0
+				elif move_comb == 2:
+					bear_move = -1
+					for_move = 1
+				elif move_comb == 3:
+					bear_move = 0
+					for_move = -1
+				elif move_comb == 4:
+					bear_move = 0
+					for_move = 0
+				elif move_comb == 5:
+					bear_move = 0
+					for_move = 1
+				elif move_comb == 6:
+					bear_move = 1
+					for_move = -1
+				elif move_comb == 7:
+					bear_move = 1
+					for_move = 0
+				elif move_comb == 8:
+					bear_move = 1
+					for_move = 1
+
 			# move car
 			if any([i != 0 for i in [bear_move, for_move]]) and not(car.finished):
 				car.move(bear_move, for_move, track, frame_count)
