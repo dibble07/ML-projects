@@ -9,33 +9,34 @@ class course(object):
 		# middle
 		self.middle_poly = Polygon(coords)
 		self.middle_lin = LinearRing(self.middle_poly.exterior.coords)
-		temp_coords = UniqueWrap([(int(np.round(x)), int(np.round(y))) for x,y in zip(*self.middle_poly.exterior.xy)])
+		temp_coords = UniqueWrap([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
 		self.middle_coords = temp_coords[::-1]
 		# inner
 		temp_poly = Polygon(self.middle_poly.buffer(track_width*-1).exterior, [self.middle_lin])
-		temp_coords = UniqueWrap([(int(np.round(x)), int(np.round(y))) for x,y in zip(*temp_poly.exterior.xy)])
+		temp_coords = UniqueWrap([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
 		self.inner_coords = temp_coords[::-1]
 		self.inner_poly = Polygon(self.inner_coords)
 		self.inner_lin = LinearRing(self.inner_poly.exterior.coords)
 		# outer
 		temp_poly = Polygon(self.middle_poly.buffer(track_width).exterior, [self.middle_lin])
-		temp_coords = UniqueWrap([(int(np.round(x)), int(np.round(y))) for x,y in zip(*temp_poly.exterior.xy)])
+		temp_coords = UniqueWrap([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
 		self.outer_coords = temp_coords[::-1]
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 
 	def draw(self, win):
-		pygame.draw.polygon(win, (128,128,128), self.outer_coords)
-		pygame.draw.polygon(win, (0,0,0), self.inner_coords)
+		outer_coords_int = CoordInt(self.outer_coords)
+		inner_coords_int = CoordInt(self.inner_coords)
+		pygame.draw.polygon(win, (128,128,128), outer_coords_int)
+		pygame.draw.polygon(win, (0,0,0), inner_coords_int)
 
 class player(object):
-	def __init__(self, player_sz, sense_ang, course, lap_targ, neural_network, time_init):
+	def __init__(self, player_sz, sense_ang, course, lap_targ, neural_network):
 		self.finished = False
 		self.started = False
 		self.input_method = neural_network
 		self.lap_targ = lap_targ
 		self.sense_ang = sense_ang
-		self.time_init = time_init
 		self.bear = 0
 		self.bvel = -2
 		self.fvel = 5
@@ -45,16 +46,14 @@ class player(object):
 		img = pygame.image.load("car_img.png")
 		self.img = pygame.transform.scale(pygame.transform.rotate(img, 180), (player_sz[0],player_sz[1]))
 		self.hitbox_center = course.middle_coords[0]
-		xd = int(np.ceil(player_sz[0]/2))
-		yd = int(np.ceil(player_sz[1]/2))
+		xd, yd = player_sz[0]/2, player_sz[1]/2
 		self.hitbox_coords_nonrot = [(self.hitbox_center[0]+x, self.hitbox_center[1]+y) for (x,y) in [(-xd,-yd), (xd,-yd), (xd,yd), (-xd,yd)]]
 		self.hitbox_coords = RotatePoints(self.hitbox_center, self.hitbox_coords_nonrot, self.bear)
 		self.pos_analyse(course)
 
 	def draw(self, win):
 		temp = pygame.transform.rotate(self.img, -self.bear)
-		xd = int(np.ceil(temp.get_width()/2))
-		yd = int(np.ceil(temp.get_height()/2))
+		xd, yd = temp.get_width()/2, temp.get_height()/2
 		win.blit(temp, (self.hitbox_center[0]-xd, self.hitbox_center[1]-yd))
 		pygame.draw.polygon(win, self.colour, self.hitbox_coords, 2)
 		if self.finished:
@@ -65,13 +64,13 @@ class player(object):
 			for line in self.sense_lin:
 				if line is not None:
 					pygame.draw.line(win, self.colour, line[0], line[1], 2)
-		pygame.draw.circle(win, self.colour, self.track_loc, 5)
+		pygame.draw.circle(win, self.colour, CoordInt([self.track_loc])[0], 5)
 
-	def move(self, bear_unit, for_unit, course):
-		# save start time
+	def move(self, bear_unit, for_unit, course, frame):
+		# save start frame
 		if not(self.started):
 			self.started = True
-			self.time_start = pygame.time.get_ticks() - self.time_init
+			self.frame_start = frame
 		# save old track progress
 		self.track_prog_prev = self.track_prog
 		# move car
@@ -83,8 +82,8 @@ class player(object):
 			vel = self.bvel
 		elif for_unit == 0:
 			vel = 0
-		x_delt = int(np.round(vel*sin(angle_rad)))
-		y_delt = -int(np.round(vel*cos(angle_rad)))
+		x_delt = vel*sin(angle_rad)
+		y_delt = -vel*cos(angle_rad)
 		self.hitbox_center = (self.hitbox_center[0]+x_delt, self.hitbox_center[1]+y_delt)
 		self.hitbox_coords_nonrot = [(x+x_delt, y+y_delt) for (x,y) in self.hitbox_coords_nonrot]
 		self.hitbox_coords = RotatePoints(self.hitbox_center, self.hitbox_coords_nonrot, self.bear)
@@ -96,20 +95,20 @@ class player(object):
 		if self.lap_float == self.lap_targ or not(self.on_course):
 			self.finished = True
 
-	def frame(self, time_curr, patience):
+	def frame(self, frame_curr, patience):
 		if self.started:
-			self.time_dur = time_curr - self.time_start
+			self.frame_dur = frame_curr - self.frame_start
 		else:
-			self.time_dur = 0
-		self.score = self.lap_float - self.lap_targ# - self.time_dur/1000/60/self.lap_targ
+			self.frame_dur = 0
+		self.score = self.lap_float - self.lap_targ
 		if patience is not None:
 			if not(hasattr(self, 'score_max')):
 					self.score_max = self.score
-					self.score_max_time = time_curr
+					self.score_max_frame = frame_curr
 			if self.score > self.score_max:
 				self.score_max = self.score
-				self.score_max_time = time_curr
-			elif (time_curr - self.score_max_time)/1000 >= patience:
+				self.score_max_frame = frame_curr
+			elif (frame_curr - self.score_max_frame) >= patience:
 				self.finished = True
 
 	def pos_analyse(self, course):
@@ -135,7 +134,7 @@ class player(object):
 			if line_angle_min is None:
 				line_min.append(line_angle_min)
 			else:
-				line_min.append([(int(np.round(x)), int(np.round(y))) for x,y in zip(*line_angle_min.xy)])
+				line_min.append([(x, y) for x,y in zip(*line_angle_min.xy)])
 		self.sense_dist = dist_min
 		self.sense_lin = line_min
 		# progress round track
@@ -151,7 +150,11 @@ class player(object):
 		# location on track
 		car_loc_track = course.middle_lin.interpolate(self.track_prog, normalized = True)
 		temp = list(car_loc_track.coords)[0]
-		self.track_loc = (int(np.round(temp[0])), int(np.round(temp[1])))
+		self.track_loc = (temp[0], temp[1])
+
+def CoordInt(float_list):
+	int_list =  [(int(np.round(x)), int(np.round(y))) for (x, y) in float_list]
+	return int_list
 
 def UniqueWrap(list_in):
 	out=[]
@@ -173,10 +176,10 @@ def RotatePoints(origin, point_in, angle_deg):
 		yd = -(py - oy)
 		qx = ox + cs * xd - sn * yd
 		qy = oy + sn * xd + cs * yd
-		point_out.append((int(np.round(qx)), int(np.round(qy))))
+		point_out.append((qx, qy))
 	return point_out
 
-def RedrawGameWindow(win, course, player_list, time_curr):
+def RedrawGameWindow(win, course, player_list, frame_curr, frame_rate):
 	win.fill((0,0,0))
 	course.draw(win)
 	for player in player_list:
@@ -184,18 +187,18 @@ def RedrawGameWindow(win, course, player_list, time_curr):
 	if all([player.finished for player in player_list]):
 		player_best = player_list[np.argmax([player.score for player in player_list])]
 		lap_print = player_best.lap_float
-		time_print = player_best.time_dur
+		frame_print = player_best.frame_dur
 	else:
 		lap_print = max([player.lap_float for player in player_list])
-		time_print = time_curr
+		frame_print = frame_curr
 	font = pygame.font.SysFont('arial', 18)
-	text = font.render('Time: {0:.2f}'.format(time_print/1000), True, (255, 255, 255)) 
+	text = font.render('Time: {0:.2f}'.format(frame_print/frame_rate), True, (255, 255, 255)) 
 	win.blit(text, (5, 5))
 	text = font.render('Laps: {0:.2f}'.format(lap_print), True, (255, 255, 255)) 
 	win.blit(text, (5, 25)) 
 	pygame.display.update()
 
-def PlayGame(method_list, win_str, fin_pause, lap_targ, patience):
+def PlayGame(method_list, win_str, fin_pause, lap_targ, patience, show):
 
 	# initialise game
 	pygame.init()
@@ -203,21 +206,19 @@ def PlayGame(method_list, win_str, fin_pause, lap_targ, patience):
 	win_sz = (600,600)
 	win = pygame.display.set_mode(win_sz)
 	clock = pygame.time.Clock()
+	frame_rate = 30
 	sense_angle = np.linspace(-90, 90, num=5, endpoint = True)
-	time_init = pygame.time.get_ticks()
 
 	# initialise components
 	track_init = [(100, 300), (100, 100), (200,100), (200,200), (300, 200), (300, 100), (500, 100), (500, 200), (400, 300), (500, 400), (500, 500), (200, 500), (200, 400)]
 	track = course(track_init, 35)
 	car_sz = (16, 32)
-	car_list = [player(car_sz, sense_angle, track, lap_targ, neur_net, time_init) for neur_net in method_list]
+	car_list = [player(car_sz, sense_angle, track, lap_targ, neur_net) for neur_net in method_list]
 
 	# game loop
 	run = True
+	frame_count = 0
 	while run:
-
-		# maintain frame rate
-		clock.tick(15)
 
 		# move cars
 		for car in car_list:
@@ -248,13 +249,13 @@ def PlayGame(method_list, win_str, fin_pause, lap_targ, patience):
 					for_move-=1
 			# move car
 			if any([i != 0 for i in [bear_move, for_move]]) and not(car.finished):
-				car.move(bear_move, for_move, track)
+				car.move(bear_move, for_move, track, frame_count)
 
-		# update time and score
-		time_frame = pygame.time.get_ticks() - time_init
+		# update frame counter and score
+		frame_count +=1
 		for car in car_list:
 			if not(car.finished):
-				car.frame(time_frame, patience)
+				car.frame(frame_count, patience)
 
 		# check if any cars are not finished
 		if all([car.finished for car in car_list]) and fin_pause is not None:
@@ -265,11 +266,14 @@ def PlayGame(method_list, win_str, fin_pause, lap_targ, patience):
 			if event.type == pygame.QUIT:
 				run = False
 	            
-		RedrawGameWindow(win, track, car_list, time_frame)
+		# redraw game window
+		if show:
+			# clock.tick(frame_rate)
+			RedrawGameWindow(win, track, car_list, frame_count, frame_rate)
 
-	if fin_pause is not None:
+	if fin_pause is not None and show:
 		pygame.time.delay(fin_pause)
 	pygame.quit()
 	return [car.score for car in car_list if car.input_method is not None]
 
-# PlayGame([None], 'Test', 1000, 1, 5)
+PlayGame([None], 'Test', 1000, 1, 150, True)

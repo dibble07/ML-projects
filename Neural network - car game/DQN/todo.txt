@@ -13,3 +13,4 @@ multuple frames to learn time derivatives
 code:
 round pixels only for display purposes
 user tracked time steps
+convert to mx1 output size of combinations
