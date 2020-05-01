@@ -45,8 +45,7 @@ def compute_avg_return(environment, policy, num_episodes=10):
     while not time_step.is_last():
       action_step = policy.action(time_step)
       time_step = environment.step(action_step.action)
-      episode_return += time_step.reward
-    total_return += episode_return
+      total_return += time_step.reward
 
   avg_return = total_return / num_episodes
   return avg_return.numpy()[0]
@@ -65,33 +64,30 @@ def collect_data(env, policy, buffer, steps):
     collect_step(env, policy, buffer)
 
 # Hyperparameters
-num_iterations = 10000
+num_iterations = 4000
 initial_collect_steps = 1000
 collect_steps_per_iteration = 1
 replay_buffer_max_length = 100000
-batch_size = 64 
+batch_size = 64
 learning_rate = 1e-3
-log_interval = 200 
 num_eval_episodes = 10
-eval_interval = 1000
+eval_interval = 250
 
 # Environment
-# initialise
+# load python environment and convert to tensforflow environment
 env_name = 'CartPole-v0'
-env = suite_gym.load(env_name)
-time_step = env.reset()
-PIL.Image.fromarray(env.render())
+train_py_env = suite_gym.load(env_name)
+eval_py_env = suite_gym.load(env_name)
+train_env = tf_py_environment.TFPyEnvironment(train_py_env)
+eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 # display specs
+# env = suite_gym.load(env_name)
+# time_step = env.reset()
 # print('Observation Spec:', env.time_step_spec().observation) # the position and velocity of the cart and pole 
 # print('Reward Spec:', env.time_step_spec().reward)
 # print('Action Spec:', env.action_spec()) # 0/1 — move left/right
 # print('Time step:', time_step)
 # print('Next time step:', env.step(np.array(1, dtype=np.int32)))
-# load python environment and convert to tensforflow environment
-# train_py_env = suite_gym.load(env_name)
-# eval_py_env = suite_gym.load(env_name)
-train_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
-eval_env = tf_py_environment.TFPyEnvironment(suite_gym.load(env_name))
 
 # Agent
 fc_layer_params = (100,)
@@ -119,8 +115,6 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     data_spec=agent.collect_data_spec,
     batch_size=train_env.batch_size,
     max_length=replay_buffer_max_length)
-agent.collect_data_spec
-agent.collect_data_spec._fields
 # data collection
 collect_data(train_env, random_policy, replay_buffer, steps=100)
 dataset = replay_buffer.as_dataset(
@@ -130,7 +124,7 @@ dataset = replay_buffer.as_dataset(
 iterator = iter(dataset)
 
 # Training the agent
-agent.train = common.function(agent.train) # optimize by wrapping some of the code in a graph using TF function.
+agent.train = common.function(agent.train) # optimize by wrapping some of the code in a graph using TF function
 agent.train_step_counter.assign(0)
 avg_return = compute_avg_return(eval_env, agent.policy, num_eval_episodes)
 returns = [avg_return]
@@ -145,9 +139,6 @@ for _ in range(num_iterations):
   train_loss = agent.train(experience).loss
 
   step = agent.train_step_counter.numpy()
-
-  if step % log_interval == 0:
-    print('step = {0}: loss = {1}'.format(step, train_loss))
 
   if step % eval_interval == 0:
     avg_return = compute_avg_return(eval_env, agent.policy, num_eval_episodes)

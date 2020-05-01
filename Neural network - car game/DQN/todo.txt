@@ -1,0 +1,15 @@
+physics:
+acceleration
+turning radius
+grip limits
+tyre degradation
+fuel use
+remaining laps
+
+learning:
+convert pygame to dqn like environment
+multuple frames to learn time derivatives
+
+code:
+round pixels only for display purposes
+user tracked time steps
