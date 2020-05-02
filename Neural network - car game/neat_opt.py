@@ -31,8 +31,6 @@ def AddStats(p_in):
 	p_in.add_reporter(checkpointer)
 	return p_in
 
-# cargame.PlayGame([None], 1000, 1, 30)
-
 # Initialise optimisation
 stats = neat.StatisticsReporter()
 checkpointer = neat.Checkpointer(10)
@@ -48,7 +46,7 @@ except:
 # Run optimisation
 gen_curr = 0
 p = AddStats(p)
-winner = p.run(EvalGenomes, 100)
+winner = p.run(EvalGenomes, 200)
 
 # Visualise results
 visualize.plot_stats(stats, ylog=False, view=False)
