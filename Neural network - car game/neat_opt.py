@@ -20,7 +20,7 @@ def EvalGenomes(genomes, config):
 	for __, genome in genomes:
 		networks.append(neat.nn.FeedForwardNetwork.create(genome, config))
 	show = True if gen_curr % 10 == 0 else False
-	scores = cargame.PlayGame(networks, "Generation: {0:1.0f}".format(gen_curr), 1000, 2, 50, show)
+	scores = cargame.PlayGame(networks, "Generation: {0:1.0f}".format(gen_curr), 1000, 50, show)
 	for (__, genome), score in zip(genomes, scores):
 		genome.fitness = score
 	gen_curr +=1
@@ -46,7 +46,7 @@ except:
 # Run optimisation
 gen_curr = 0
 p = AddStats(p)
-winner = p.run(EvalGenomes, 200)
+winner = p.run(EvalGenomes, 1000)
 
 # Visualise results
 visualize.plot_stats(stats, ylog=False, view=False)
