@@ -46,10 +46,11 @@ class CardGameEnv(py_environment.PyEnvironment):
 class CarGameEnv(py_environment.PyEnvironment):
 
   def __init__(self):
+    # specifications
     self._action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=1, name='action')
     self._observation_spec = array_spec.BoundedArraySpec(shape=(1,), dtype=np.int32, minimum=0, name='observation')
-
-    # specifications
+    # misc
+    self.viewer = None
     # temp=[]
     # for rot in [0, -1, 1]:
     #   for trans in [1, 0, -1]:
@@ -57,7 +58,6 @@ class CarGameEnv(py_environment.PyEnvironment):
     temp = [(1,0), (0,1)]
     self.move_comb = temp
     self.patience = 10
-    self.viewer = None
     self.lap_targ = 0.5
     self.loc_mem_sz = 50
     # initialise track
@@ -95,15 +95,11 @@ class CarGameEnv(py_environment.PyEnvironment):
     return self._observation_spec
 
   def _reset(self):
-    # self._state = 21
-    # self._episode_ended = False
-
     self.finished_episode = False
-    # self.started = False
     self.frame_curr = 0
     self.bear = 0
     self.lap_whole = 0
-    self.lap_prec = None
+    self.lap_float = None
     self.track_prog_prev = None
     self.score = None
     self.score_max = self.score
@@ -134,17 +130,6 @@ class CarGameEnv(py_environment.PyEnvironment):
     if self.finished_course or not self.on_course or (self.frame_curr - self.score_max_frame) >= self.patience:
       self.finished_episode = True
 
-    # if action == 0:
-    #   new_card = -4
-    #   self._state += new_card
-    # elif action == 1:
-    #   self._episode_ended = True
-    # if self._state <= 0:
-    #   self._episode_ended = True
-
-    # if self._episode_ended != self.finished_episode:
-    #   print(self._episode_ended, self.finished_episode)
-
     if self.finished_episode:
       reward = -self.sense_dist[0] if self.sense_dist[0] is not None else -21
       obs = self.sense_dist[0] if self.sense_dist[0] is not None else 0
@@ -155,29 +140,21 @@ class CarGameEnv(py_environment.PyEnvironment):
       return ts.transition(np.array([obs], dtype=np.int32), reward, discount=1.0)
 
   def score_analyse(self):
-    # if self.started:
-    #   self.frame_dur = self.frame_curr - self.frame_start
-    # else:
-    #   self.frame_dur = 0
     self.score_prev = self.score
-    self.score = self.lap_prec
+    self.score = self.lap_float
 
     if self.score_max is None:
-      update = True
+      new_max = True
     else:
       if self.score > self.score_max:
-        update = True
+        new_max = True
       else:
-        update = False
-    if update:
+        new_max = False
+    if new_max:
       self.score_max = self.score
       self.score_max_frame = self.frame_curr
 
   def move(self, bear_unit, for_unit):
-    # save start frame
-    # if not(self.started):
-    #   self.started = True
-    #   self.frame_start = self.frame_curr
     # save old track progress
     self.track_prog_prev = self.track_prog
     # move car
@@ -197,11 +174,6 @@ class CarGameEnv(py_environment.PyEnvironment):
     self.pos_analyse()
     del self.loc_mem[self.loc_mem_sz-1]
     self.loc_mem = [self.hitbox_center] + self.loc_mem
-    # check finished
-    # if self.lap_float >= self.lap_targ or not(self.on_course):
-    #   print(self.lap_float >= self.lap_targ, not(self.on_course))
-    #   print("Completed course - woohoo or left course - not woohoo")
-    #   self.finished = True
 
   def outer_points(self):
     # non rotated outer points
@@ -235,14 +207,14 @@ class CarGameEnv(py_environment.PyEnvironment):
         self.lap_whole +=1
       elif track_prog_change > 0.8:
         self.lap_whole -=1
-    self.lap_prec = self.lap_whole + self.track_prog
+    self.lap_float = self.lap_whole + self.track_prog
     # location on track
     car_loc_track = self.middle_lin.interpolate(self.track_prog, normalized = True)
     temp = list(car_loc_track.coords)[0]
     self.track_loc = (temp[0], temp[1])
     # check finished course
-    if self.lap_prec is not None:
-      self.finished_course = self.lap_prec >= self.lap_targ
+    if self.lap_float is not None:
+      self.finished_course = self.lap_float >= self.lap_targ
     # sense surroundings
     x,y = self.hitbox_center
     dist_min = []
