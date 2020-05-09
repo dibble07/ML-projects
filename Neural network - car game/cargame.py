@@ -4,10 +4,14 @@ import pygame
 import random
 from shapely.geometry import Polygon, Point, LinearRing, LineString
 
-# from tf_agents.environments import py_environment
-
 class game_env(object):
 	def __init__(self, neural_network, show):
+		temp=[]
+		for trans in [0, 1, -1]:
+			for rot in [0, -1, 1]:
+				temp.append((trans, rot))
+		self.move_comb = temp
+		self.patience = 50
 		# initialise track
 		track_coords = [(100, 300), (100, 100), (200,100), (200,200), (300, 200), (300, 100), (500, 100), (500, 200), (400, 300), (500, 400), (500, 500), (200, 500), (200, 400)]
 		track_width = 35
@@ -37,13 +41,12 @@ class game_env(object):
 		if show:
 			img = pygame.image.load("car_img.png")
 			self.img = pygame.transform.scale(pygame.transform.rotate(img, 180), (self.sz[0],self.sz[1]))
-		else:
-			self.img = None
 		# reset
 		self.finished = False
 		self.started = False
 		self.bear = 0
 		self.lap = 0
+		self.frame_curr = 0
 		self.hitbox_center = self.middle_coords[0]
 		self.hitbox_coords = self.outer_points()
 		self.pos_analyse()
@@ -71,11 +74,11 @@ class game_env(object):
 						pygame.draw.line(win, self.colour, line[0], line[1], 2)
 			pygame.draw.circle(win, self.colour, CoordInt([self.track_loc])[0], 5)
 
-	def move(self, bear_unit, for_unit, frame):
+	def move(self, bear_unit, for_unit):
 		# save start frame
 		if not(self.started):
 			self.started = True
-			self.frame_start = frame
+			self.frame_start = self.frame_curr
 		# save old track progress
 		self.track_prog_prev = self.track_prog
 		# move car
@@ -99,20 +102,20 @@ class game_env(object):
 		if self.lap_float == self.lap_targ or not(self.on_course):
 			self.finished = True
 
-	def frame(self, frame_curr, patience):
+	def frame(self):
 		if self.started:
-			self.frame_dur = frame_curr - self.frame_start
+			self.frame_dur = self.frame_curr - self.frame_start
 		else:
 			self.frame_dur = 0
 		self.score = self.lap_float - self.lap_targ
-		if patience is not None:
+		if self.patience is not None:
 			if not(hasattr(self, 'score_max')):
 					self.score_max = self.score
-					self.score_max_frame = frame_curr
+					self.score_max_frame = self.frame_curr
 			if self.score > self.score_max:
 				self.score_max = self.score
-				self.score_max_frame = frame_curr
-			elif (frame_curr - self.score_max_frame) >= patience:
+				self.score_max_frame = self.frame_curr
+			elif (self.frame_curr - self.score_max_frame) >= self.patience:
 				self.finished = True
 
 	def pos_analyse(self):
@@ -187,7 +190,7 @@ def CoordInt(float_list):
 	int_list =  [(int(np.round(x)), int(np.round(y))) for (x, y) in float_list]
 	return int_list
 
-def RedrawGameWindow(win, game_list, frame_curr, frame_rate):
+def RedrawGameWindow(win, game_list, frame_rate):
 	win.fill((0,0,0))
 	game_list[0].draw(win, 'track')
 	for player in game_list:
@@ -198,7 +201,7 @@ def RedrawGameWindow(win, game_list, frame_curr, frame_rate):
 		frame_print = player_best.frame_dur
 	else:
 		lap_print = max([player.lap_float for player in game_list])
-		frame_print = frame_curr
+		frame_print = max([player.frame_curr for player in game_list])
 	font = pygame.font.SysFont('arial', 18)
 	text = font.render('Time: {0:.2f}'.format(frame_print/frame_rate), True, (255, 255, 255)) 
 	win.blit(text, (5, 5))
@@ -206,7 +209,7 @@ def RedrawGameWindow(win, game_list, frame_curr, frame_rate):
 	win.blit(text, (5, 25)) 
 	pygame.display.update()
 
-def PlayGame(method_list, win_str, fin_pause, patience, show):
+def PlayGame(method_list, win_str, fin_pause, show):
 
 	# initialise game
 	win_sz = (600,600)
@@ -217,13 +220,11 @@ def PlayGame(method_list, win_str, fin_pause, patience, show):
 		win = pygame.display.set_mode(win_sz)
 		clock = pygame.time.Clock()
 
-	# initialise components
-	ho = game_env([None], True)
+	# initialise environments
 	game_list = [game_env(method, show) for method in method_list]
 
 	# game loop
 	run = True
-	frame_count = 0
 	while run:
 
 		# move cars
@@ -245,44 +246,18 @@ def PlayGame(method_list, win_str, fin_pause, patience, show):
 				# get neural netowrk input
 				neur_net_input = [dist/sum(win_sz) for dist in game.sense_dist]
 				pred_float = game.input_method.activate(neur_net_input)
-				move_comb = np.argmax(pred_float)
-				if move_comb == 0:
-					bear_move = -1
-					for_move = -1
-				elif move_comb == 1:
-					bear_move = -1
-					for_move = 0
-				elif move_comb == 2:
-					bear_move = -1
-					for_move = 1
-				elif move_comb == 3:
-					bear_move = 0
-					for_move = -1
-				elif move_comb == 4:
-					bear_move = 0
-					for_move = 0
-				elif move_comb == 5:
-					bear_move = 0
-					for_move = 1
-				elif move_comb == 6:
-					bear_move = 1
-					for_move = -1
-				elif move_comb == 7:
-					bear_move = 1
-					for_move = 0
-				elif move_comb == 8:
-					bear_move = 1
-					for_move = 1
+				move = np.argmax(pred_float)
+				bear_move, for_move = game.move_comb[move]
 
 			# move car
 			if any([i != 0 for i in [bear_move, for_move]]) and not(game.finished):
-				game.move(bear_move, for_move, frame_count)
+				game.move(bear_move, for_move)
 
 		# update frame counter and score
-		frame_count +=1
 		for game in game_list:
 			if not(game.finished):
-				game.frame(frame_count, patience)
+				game.frame_curr +=1
+				game.frame()
 
 		# check if any cars are not finished
 		if all([game.finished for game in game_list]) and fin_pause is not None:
@@ -297,7 +272,7 @@ def PlayGame(method_list, win_str, fin_pause, patience, show):
 		# redraw game window
 		if show:
 			clock.tick(frame_rate)
-			RedrawGameWindow(win, game_list, frame_count, frame_rate)
+			RedrawGameWindow(win, game_list, frame_rate)
 
 	if show:
 		if fin_pause is not None:
@@ -305,4 +280,4 @@ def PlayGame(method_list, win_str, fin_pause, patience, show):
 		pygame.quit()
 	return [car.score for car in game_list if car.input_method is not None]
 
-PlayGame([None], 'Test', 1000, 150, True)
+PlayGame([None], 'Test', 1000, True)

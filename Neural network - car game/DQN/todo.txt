@@ -5,8 +5,10 @@ grip limits
 tyre degradation
 fuel use
 remaining laps
-race driver differences - sensing array, learning rate
+race driver differences - sensing array, learning rate, memory
+turning head/sesnsor array
 
 learning:
-convert pygame to dqn like environment
+replicate card game
+find and mimic car env version
 multiple frames to learn time derivatives

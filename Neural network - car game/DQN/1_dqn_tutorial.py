@@ -23,12 +23,16 @@ from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 
-def create_policy_eval_video(policy, filename, num_episodes=5, fps=30):
+def create_policy_eval_video(policy, filename, num_episodes=1, fps=30):
   filename = filename + ".mp4"
   with imageio.get_writer(filename, fps=fps) as video:
     for _ in range(num_episodes):
       time_step = eval_env.reset()
       video.append_data(eval_py_env.render())
+      # print(eval_py_env.render())
+      # print(eval_py_env.render().shape)
+      # print(type(eval_py_env.render()))
+      # print(dir(eval_py_env.render()))
       while not time_step.is_last():
         action_step = policy.action(time_step)
         time_step = eval_env.step(action_step.action)
@@ -64,7 +68,7 @@ def collect_data(env, policy, buffer, steps):
     collect_step(env, policy, buffer)
 
 # Hyperparameters
-num_iterations = 4000
+num_iterations = 500
 initial_collect_steps = 1000
 collect_steps_per_iteration = 1
 replay_buffer_max_length = 100000
@@ -151,6 +155,6 @@ plt.plot(iterations, returns)
 plt.ylabel('Average Return')
 plt.xlabel('Iterations')
 plt.ylim(top=250)
-create_policy_eval_video(agent.policy, "trained-agent")
+# create_policy_eval_video(agent.policy, "trained-agent")
 create_policy_eval_video(random_policy, "random-agent")
 plt.show()
