@@ -77,7 +77,7 @@ batch_size = 64
 learning_rate = 1e-3
 num_eval_episodes = 10
 eval_interval = 100
-env_name = 'CartPole-v0'
+env_name = 'CartPole-v0'        
 env_name = 'Car'
 # env_name = 'Card'
 

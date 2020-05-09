@@ -1,3 +1,10 @@
+learning:
+learn to stop at edge of track
+learn to turn corner
+learn to do lap
+learn to do lap fast - refactor code
+multiple frames to learn time derivatives
+
 physics:
 acceleration
 turning radius
@@ -7,8 +14,3 @@ fuel use
 remaining laps
 race driver differences - sensing array, learning rate, memory
 turning head/sesnsor array
-
-learning:
-replicate card game
-find and mimic car env version
-multiple frames to learn time derivatives
