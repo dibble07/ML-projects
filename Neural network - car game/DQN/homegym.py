@@ -21,7 +21,7 @@ class CarGameEnv_FAULTY(py_environment.PyEnvironment):
     self.move_comb = temp
     self.patience = 10
     self.viewer = None
-    self.lap_targ = 0.15
+    self.lap_targ = 0.5
     self.loc_mem_sz = 50
     # initialise track
     # track_coords = [(100, 300), (100, 100), (200,100), (200,200), (300, 200), (300, 100), (500, 100), (500, 200), (400, 300), (500, 400), (500, 500), (200, 500), (200, 400)]
@@ -327,12 +327,12 @@ class CarGameEnv(py_environment.PyEnvironment):
     self.move_comb = temp
     self.patience = 10
     self.viewer = None
-    self.lap_targ = 0.15
+    self.lap_targ = 0.5
     self.loc_mem_sz = 50
     # initialise track
     # track_coords = [(100, 300), (100, 100), (200,100), (200,200), (300, 200), (300, 100), (500, 100), (500, 200), (400, 300), (500, 400), (500, 500), (200, 500), (200, 400)]
-    track_coords = [(100, 200), (100, 300), (300, 300), (300, 100), (100, 100)]
-    track_width = 35
+    track_coords = [(10, 10), (10, 30), (30, 30), (30, 10), (10, 10)]
+    track_width = 1
     self.middle_poly = Polygon(track_coords)
     self.middle_lin = LinearRing(self.middle_poly.exterior.coords)
     temp_coords = self.unique_wrap([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
@@ -351,9 +351,9 @@ class CarGameEnv(py_environment.PyEnvironment):
     # self.sense_ang = np.linspace(-90, 90, num=5, endpoint = True)
     self.sense_ang = np.linspace(0, 0, num=1, endpoint = True)
     self.bvel = -2
-    self.fvel = 15
+    self.fvel = 4
     self.rvel = 360/4
-    self.sz = (1, 2)
+    self.sz = (16/100, 32/100)
     # reset
     self.reset()
 
@@ -400,25 +400,28 @@ class CarGameEnv(py_environment.PyEnvironment):
         self.move(bear_unit, for_unit)
       self.frame_curr +=1
       self.frame()
-      if self.finished:
-        if self.on_course:
-          reward = -self.sense_dist[0]
-          obs = self.sense_dist
-        else:
-          reward = -135
-          obs = [0]
+      # if self.finished:
+      #   if self.on_course:
+      #     reward = -self.sense_dist[0]
+      #     obs = self.sense_dist
+      #   else:
+      #     reward = -135
+      #     obs = [0]
         # return ts.termination(np.array(obs, dtype=np.float32), reward)
-      else:
-        reward = 0
-        obs = self.sense_dist
+      # else:
+        # reward = 0
+        # obs = self.sense_dist
         # return ts.transition(np.array(obs, dtype=np.float32), reward, discount=0.9)
-
 
     if action == 0:
       new_card = -4
       self._state += new_card
     elif action == 1:
       self._episode_ended = True
+
+    # print(self._state, self.sense_dist[0], self.finished, action, self.frame_curr - self.score_max_frame, self.lap_targ, self.lap_float)
+    if self._state >= 0 and self._state != self.sense_dist[0]:
+      print(self._state, self.sense_dist[0])
 
     if self._episode_ended or self._state <= 0:
       reward = -self._state if self._state > 0 else -21
@@ -539,3 +542,67 @@ class CarGameEnv(py_environment.PyEnvironment):
         out.append(i)
     out.append(out[0])
     return out
+
+  def render(self):
+    if self.viewer is None:
+      from gym.envs.classic_control import rendering
+      self.viewer = rendering.Viewer(608, 608)
+      # track
+      track_out = rendering.FilledPolygon(self.outer_coords)
+      track_out.set_color(.5,.5,.5)
+      self.viewer.add_geom(track_out)
+      track_in = rendering.FilledPolygon(self.inner_coords)
+      track_in.set_color(1,1,1)
+      self.viewer.add_geom(track_in)
+      # car - image
+      car_img = rendering.Image("car_img.png", *self.sz)
+      self.car_img_trans = rendering.Transform()
+      car_img.add_attr(self.car_img_trans)
+      self.viewer.add_geom(car_img)
+      # car - box
+      l,r,t,b = -self.sz[0]/2, self.sz[0]/2, self.sz[1]/2, -self.sz[1]/2
+      car_box = rendering.make_polygon([(l,b), (l,t), (r,t), (r,b)], filled=False)
+      car_box.set_color(1,0,0)
+      self.car_box_trans = rendering.Transform()
+      car_box.add_attr(self.car_box_trans)
+      self.viewer.add_geom(car_box)
+      # car - track location
+      car_track_loc = rendering.make_circle(2)
+      car_track_loc.set_color(1,0,0)
+      self.car_track_loc_trans = rendering.Transform()
+      car_track_loc.add_attr(self.car_track_loc_trans)
+      self.viewer.add_geom(car_track_loc)
+      # car - sensing points
+      car_sense_loc_trans = []
+      for __ in self.sense_lin:
+        circle = rendering.make_circle(3)
+        circle.set_color(0,1,0)
+        circle_trans = rendering.Transform()
+        circle.add_attr(circle_trans)
+        car_sense_loc_trans.append(circle_trans)
+        self.viewer.add_geom(circle)
+      self.car_sense_loc_trans = car_sense_loc_trans
+      # car - history points
+      car_loc_mem_trans = []
+      for __ in self.loc_mem:
+        circle = rendering.make_circle(1)
+        circle.set_color(0,0,1)
+        circle_trans = rendering.Transform()
+        circle.add_attr(circle_trans)
+        car_loc_mem_trans.append(circle_trans)
+        self.viewer.add_geom(circle)
+      self.car_loc_mem_trans = car_loc_mem_trans
+
+    # update positions
+    self.car_img_trans.set_translation(*self.hitbox_center)
+    self.car_img_trans.set_rotation(-self.bear/180*pi)
+    self.car_box_trans.set_translation(*self.hitbox_center)
+    self.car_box_trans.set_rotation(-self.bear/180*pi)
+    self.car_track_loc_trans.set_translation(*self.track_loc)
+    for line, trans in zip(self.sense_lin, self.car_sense_loc_trans):
+      loc = line[1] if line is not None else self.hitbox_center
+      trans.set_translation(*loc)
+    for loc, trans in zip(self.loc_mem, self.car_loc_mem_trans):
+      trans.set_translation(*loc)
+
+    return self.viewer.render(return_rgb_array = True)

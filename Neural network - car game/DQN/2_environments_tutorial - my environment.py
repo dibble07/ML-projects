@@ -13,9 +13,20 @@ from tf_agents.trajectories import time_step as ts
 from homegym import CardGameEnv, CarGameEnv
 tf.compat.v1.enable_v2_behavior()
 
-environment = suite_gym.load('CartPole-v0')
-environment = CarGameEnv()
-# environment = CardGameEnv()
+env_name = 'CartPole-v0'
+env_name = 'Car'
+# env_name = 'Card'
+
+if env_name == 'CartPole-v0':
+  environment = suite_gym.load('CartPole-v0')
+  rend_flag = True
+elif env_name == 'Card':
+  environment = CardGameEnv()
+  rend_flag = False
+elif env_name == 'Car':
+  environment = CarGameEnv()
+  rend_flag = True
+print("Environment: ", env_name)
 
 print('action_spec:', environment.action_spec())
 print('time_step_spec.observation:', environment.time_step_spec().observation)
@@ -28,6 +39,8 @@ time_step = environment.reset()
 print(time_step)
 while not time_step.is_last():
   time_step = environment.step(action)
+  if rend_flag:
+    environment.render()
   print(time_step)
 
-utils.validate_py_environment(environment, episodes=5)
+# utils.validate_py_environment(environment, episodes=5)
