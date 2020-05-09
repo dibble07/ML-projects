@@ -14,8 +14,8 @@ from homegym import CardGameEnv, CarGameEnv
 tf.compat.v1.enable_v2_behavior()
 
 environment = suite_gym.load('CartPole-v0')
-# environment = CarGameEnv()
-environment = CardGameEnv()
+environment = CarGameEnv()
+# environment = CardGameEnv()
 
 print('action_spec:', environment.action_spec())
 print('time_step_spec.observation:', environment.time_step_spec().observation)

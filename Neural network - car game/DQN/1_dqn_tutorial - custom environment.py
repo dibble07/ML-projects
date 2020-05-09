@@ -69,7 +69,7 @@ def collect_data(env, policy, buffer, steps):
     collect_step(env, policy, buffer)
 
 # Hyperparameters
-num_iterations = 1500
+num_iterations = 1000
 initial_collect_steps = 1000
 collect_steps_per_iteration = 1
 replay_buffer_max_length = 100000
@@ -78,9 +78,8 @@ learning_rate = 1e-3
 num_eval_episodes = 10
 eval_interval = 100
 env_name = 'CartPole-v0'
-# env_name = 'Car'
-env_name = 'Card'
-print("Environment: ", env_name)
+env_name = 'Car'
+# env_name = 'Card'
 
 # Environment
 # load python environment and convert to tensforflow environment
@@ -95,6 +94,7 @@ elif env_name == 'Car':
   eval_py_env = CarGameEnv()
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
+print("Environment: ", env_name)
 
 # Agent
 fc_layer_params = (100,)
