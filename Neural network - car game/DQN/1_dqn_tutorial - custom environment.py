@@ -7,6 +7,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL.Image
+from homegym import CardGameEnv, CarGameEnv
 
 import tensorflow as tf
 tf.compat.v1.enable_v2_behavior()
@@ -68,7 +69,7 @@ def collect_data(env, policy, buffer, steps):
     collect_step(env, policy, buffer)
 
 # Hyperparameters
-num_iterations = 2000
+num_iterations = 1500
 initial_collect_steps = 1000
 collect_steps_per_iteration = 1
 replay_buffer_max_length = 100000
@@ -76,22 +77,24 @@ batch_size = 64
 learning_rate = 1e-3
 num_eval_episodes = 10
 eval_interval = 100
+env_name = 'CartPole-v0'
+# env_name = 'Car'
+env_name = 'Card'
+print("Environment: ", env_name)
 
 # Environment
 # load python environment and convert to tensforflow environment
-env_name = 'CartPole-v0'
-train_py_env = suite_gym.load(env_name)
-eval_py_env = suite_gym.load(env_name)
+if env_name == 'CartPole-v0':
+  train_py_env = suite_gym.load('CartPole-v0')
+  eval_py_env = suite_gym.load('CartPole-v0')
+elif env_name == 'Card':
+  train_py_env = CardGameEnv()
+  eval_py_env = CardGameEnv()
+elif env_name == 'Car':
+  train_py_env = CarGameEnv()
+  eval_py_env = CarGameEnv()
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
-# display specs
-# env = suite_gym.load(env_name)
-# time_step = env.reset()
-# print('Observation Spec:', env.time_step_spec().observation) # the position and velocity of the cart and pole 
-# print('Reward Spec:', env.time_step_spec().reward)
-# print('Action Spec:', env.action_spec()) # 0/1 — move left/right
-# print('Time step:', time_step)
-# print('Next time step:', env.step(np.array(1, dtype=np.int32)))
 
 # Agent
 fc_layer_params = (100,)
@@ -154,7 +157,6 @@ iterations = range(0, num_iterations + 1, eval_interval)
 plt.plot(iterations, returns)
 plt.ylabel('Average Return')
 plt.xlabel('Iterations')
-plt.ylim(top=250)
 # create_policy_eval_video(agent.policy, "trained-agent")
 # create_policy_eval_video(random_policy, "random-agent")
 plt.show()
