@@ -48,9 +48,11 @@ class CarGameEnv(py_environment.PyEnvironment):
   def __init__(self):
     # specifications
     self._action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=1, name='action')
-    self._observation_spec = array_spec.BoundedArraySpec(shape=(1,), dtype=np.int32, minimum=0, name='observation')
+    self._observation_spec = array_spec.BoundedArraySpec(shape=(1,), dtype=np.float32, minimum=0, name='observation')
     # misc
     self.viewer = None
+    self.win_sz = (416,416)
+    self.win_diag = (self.win_sz[0]**2+self.win_sz[1]**2)**0.5
     # temp=[]
     # for rot in [0, -1, 1]:
     #   for trans in [1, 0, -1]:
@@ -62,8 +64,8 @@ class CarGameEnv(py_environment.PyEnvironment):
     self.loc_mem_sz = 50
     # initialise track
     # track_coords = [(100, 300), (100, 100), (200,100), (200,200), (300, 200), (300, 100), (500, 100), (500, 200), (400, 300), (500, 400), (500, 500), (200, 500), (200, 400)]
-    track_coords = [(10, 10), (10, 30), (30, 30), (30, 10), (10, 10)]
-    track_width = 1
+    track_coords = [(100, 100), (100, 300), (300, 300), (300, 100), (100, 100)]
+    track_width = 30
     self.middle_poly = Polygon(track_coords)
     self.middle_lin = LinearRing(self.middle_poly.exterior.coords)
     temp_coords = self.unique_wrap([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
@@ -84,7 +86,7 @@ class CarGameEnv(py_environment.PyEnvironment):
     self.bvel = -2
     self.fvel = 4
     self.rvel = 360/4
-    self.sz = (16/100, 32/100)
+    self.sz = (16, 32)
     # reset
     self.reset()
 
@@ -110,8 +112,8 @@ class CarGameEnv(py_environment.PyEnvironment):
     self.pos_analyse()
     self.score_analyse()
 
-    obs = self.sense_dist[0] if self.sense_dist[0] is not None else 0
-    return ts.restart(np.array([obs], dtype=np.int32))
+    obs = self.sense_dist[0]/max(*self.win_sz)*20 if self.sense_dist[0] is not None else 0
+    return ts.restart(np.array([obs], dtype=np.float32))
 
   def _step(self, action):
 
@@ -131,13 +133,13 @@ class CarGameEnv(py_environment.PyEnvironment):
       self.finished_episode = True
 
     if self.finished_episode:
-      reward = -self.sense_dist[0] if self.sense_dist[0] is not None else -21
-      obs = self.sense_dist[0] if self.sense_dist[0] is not None else 0
-      return ts.termination(np.array([obs], dtype=np.int32), reward)
+      reward = -self.sense_dist[0]/max(*self.win_sz)*20 if self.on_course else -self.win_diag/max(*self.win_sz)*20
+      obs = self.sense_dist[0]/max(*self.win_sz)*20 if self.on_course else 0
+      return ts.termination(np.array([obs], dtype=np.float32), reward)
     else:
       reward = 0
-      obs = self.sense_dist[0] if self.sense_dist[0] is not None else 0
-      return ts.transition(np.array([obs], dtype=np.int32), reward, discount=1.0)
+      obs = self.sense_dist[0]/max(*self.win_sz)*20 if self.on_course else 0
+      return ts.transition(np.array([obs], dtype=np.float32), reward, discount=1.0)
 
   def score_analyse(self):
     self.score_prev = self.score
@@ -252,7 +254,7 @@ class CarGameEnv(py_environment.PyEnvironment):
   def render(self):
     if self.viewer is None:
       from gym.envs.classic_control import rendering
-      self.viewer = rendering.Viewer(608, 608)
+      self.viewer = rendering.Viewer(*self.win_sz)
       # track
       track_out = rendering.FilledPolygon(self.outer_coords)
       track_out.set_color(.5,.5,.5)

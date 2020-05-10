@@ -46,6 +46,7 @@ def compute_avg_return(environment, policy, num_episodes=10):
     while not time_step.is_last():
       action_step = policy.action(time_step)
       time_step = environment.step(action_step.action)
+      eval_py_env.render()
       total_return += time_step.reward
 
   avg_return = total_return / num_episodes
@@ -65,13 +66,13 @@ def collect_data(env, policy, buffer, steps):
     collect_step(env, policy, buffer)
 
 # Hyperparameters
-num_iterations = 5000
+num_iterations = 20000
 initial_collect_steps = 1000
 collect_steps_per_iteration = 1
 replay_buffer_max_length = 100000
 batch_size = 64
 learning_rate = 1e-3
-num_eval_episodes = 10
+num_eval_episodes = 1
 eval_interval = 100
 env_name = 'CartPole-v0'        
 env_name = 'Car'
@@ -153,6 +154,6 @@ iterations = range(0, num_iterations + 1, eval_interval)
 plt.plot(iterations, returns)
 plt.ylabel('Average Return')
 plt.xlabel('Iterations')
-# create_policy_eval_video(agent.policy, "trained-agent")
-# create_policy_eval_video(random_policy, "random-agent")
+create_policy_eval_video(agent.policy, "trained-agent")
+create_policy_eval_video(random_policy, "random-agent")
 plt.show()
