@@ -66,7 +66,7 @@ def collect_data(env, policy, buffer, steps):
     collect_step(env, policy, buffer)
 
 # Hyperparameters
-num_iterations = 20000
+num_iterations = 3000
 initial_collect_steps = 1000
 collect_steps_per_iteration = 1
 replay_buffer_max_length = 100000
