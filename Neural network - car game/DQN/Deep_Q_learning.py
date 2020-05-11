@@ -10,7 +10,6 @@ import time
 import random
 from tqdm import tqdm
 import os
-from PIL import Image
 import cv2
 from homegym import BlobEnv
 
@@ -43,7 +42,7 @@ ep_rewards = [-200]
 # For more repetitive results
 random.seed(1)
 np.random.seed(1)
-tf.set_random_seed(1)
+# tf.set_random_seed(1)
 
 # Memory fraction, used mostly when trai8ning multiple agents
 #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=MEMORY_FRACTION)
