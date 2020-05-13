@@ -338,9 +338,6 @@ class Blob:
         return self.x == other.x and self.y == other.y
 
     def action(self, choice):
-        '''
-        Gives us 9 total movement options. (0,1,2,3,4,5,6,7,8)
-        '''
         if choice == 0:
             self.move(x=1, y=1)
         elif choice == 1:
@@ -349,17 +346,14 @@ class Blob:
             self.move(x=-1, y=1)
         elif choice == 3:
             self.move(x=1, y=-1)
-
         elif choice == 4:
             self.move(x=1, y=0)
         elif choice == 5:
             self.move(x=-1, y=0)
-
         elif choice == 6:
             self.move(x=0, y=1)
         elif choice == 7:
             self.move(x=0, y=-1)
-
         elif choice == 8:
             self.move(x=0, y=0)
 

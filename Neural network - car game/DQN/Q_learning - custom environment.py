@@ -11,8 +11,8 @@ import time
 
 print("""
     To do:
-Initialise with None/NaN
 Evaluate with epsilon equal 0
+Show progression of Q table
 """)
 
 # Define user functions
@@ -41,10 +41,16 @@ def episode_fun(env_in, epsilon_in, Q_table_in, show_in):
     while not done:
         # take action
         if np.random.random() > epsilon_in:
-            # print(obs)
-            # print(tuple(i+size-1 for i in obs))
-            # print(Q_table_in[obs])
-            action = np.argmax(Q_table_in[obs_ind])
+            Q_table_obs = Q_table_in[obs_ind]
+            incomplete = np.isnan(Q_table_obs)
+            if any(incomplete):
+                incomplete_ind = np.where(incomplete)[0]
+                if incomplete_ind.size>1:
+                    action = np.random.choice(incomplete_ind)
+                else:
+                    action = incomplete_ind[0]
+            else:
+                action = np.argmax(Q_table_obs)
         else:
             action = np.random.randint(0, 4)
         new_obs, reward, done = env_in.step(action)
@@ -53,7 +59,14 @@ def episode_fun(env_in, epsilon_in, Q_table_in, show_in):
         # update Q table
         max_future_q = np.max(Q_table_in[new_obs_ind])
         current_q = Q_table_in[obs_ind][action]
-        new_q = (1 - learning_rate) * current_q + learning_rate * (reward + discount * max_future_q)
+        if np.isnan(max_future_q):
+            delta_q = reward
+        else:
+            delta_q = reward + discount * max_future_q
+        if np.isnan(current_q):
+            new_q = delta_q
+        else:
+            new_q = (1 - learning_rate) * current_q + learning_rate * delta_q
         Q_table_in[obs_ind][action] = new_q
 
         # prepare for next episode
@@ -90,7 +103,9 @@ environment = BlobEnv(size)
 # Initialise Q table
 load_Q_table = None
 if load_Q_table is None:
-    Q_table = np.random.uniform(-5, 0, (2*size-1,)*4 + (4,))
+    # Q_table = np.random.uniform(-5, 0, (2*size-1,)*4 + (4,))
+    Q_table = np.empty((2*size-1,)*4 + (4,))
+    Q_table[:] = np.NaN
 else:
     with open(load_Q_table, "rb") as f:
         Q_table = pickle.load(f)
