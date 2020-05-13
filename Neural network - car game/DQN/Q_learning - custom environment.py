@@ -1,9 +1,11 @@
 # import libraries
 import cv2
-from homegym import BlobEnv
+from homegym import BlobEnv, CarGameEnv
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 from matplotlib import style
 style.use("ggplot")
-import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 from PIL import Image
@@ -12,7 +14,6 @@ import time
 print("""
     To do:
 Evaluate with epsilon equal 0
-Show progression of Q table
 """)
 
 # Define user functions
@@ -33,8 +34,7 @@ def epsilon_fun(eps_in):
 
 def episode_fun(env_in, epsilon_in, Q_table_in, show_in):
     # reset episode
-    obs = env_in.reset()
-    obs_ind = tuple(i+size-1 for i in obs)
+    obs_ind = env_in.reset()
     episode_reward = 0
     step_count = 0
     done = False
@@ -52,9 +52,8 @@ def episode_fun(env_in, epsilon_in, Q_table_in, show_in):
             else:
                 action = np.argmax(Q_table_obs)
         else:
-            action = np.random.randint(0, 4)
-        new_obs, reward, done = env_in.step(action)
-        new_obs_ind = tuple(i+size-1 for i in new_obs)
+            action = np.random.randint(0, len(environment.action_space))
+        new_obs_ind, reward, done = env_in.step(action)
 
         # update Q table
         max_future_q = np.max(Q_table_in[new_obs_ind])
@@ -75,9 +74,7 @@ def episode_fun(env_in, epsilon_in, Q_table_in, show_in):
             step_count += 1
         else:
             done = True
-        obs = new_obs
-        obs_ind = tuple(i+size-1 for i in obs)
-
+        obs_ind = new_obs_ind
 
         # render if desired
         if show_in:
@@ -86,29 +83,27 @@ def episode_fun(env_in, epsilon_in, Q_table_in, show_in):
     return Q_table_in, episode_reward
 
 # Initialise variables and environment
-episode_final = 12_000
-episode_vis = 1_000
-episode_length = 100
+episode_final = 50_000
+episode_vis = 100
+episode_length = float('inf')
 
-epsilon_init = 0.5
-epsilon_init_ep = 6_000
+epsilon_init_ep = 1_000
+epsilon_init = 0.02
+epsilon_final = 0.001
 epsilon_decay = 0.001
-epsilon_final = 0.05
 
 learning_rate = 0.1
 discount = 0.95
-size = 6
-environment = BlobEnv(size)
+environment = CarGameEnv()
 
 # Initialise Q table
-load_Q_table = None
-if load_Q_table is None:
-    # Q_table = np.random.uniform(-5, 0, (2*size-1,)*4 + (4,))
-    Q_table = np.empty((2*size-1,)*4 + (4,))
+load_Q_table = "Q_table.npy"
+try:
+    Q_table = np.load(load_Q_table)
+except:
+    print("No Q table loaded")
+    Q_table = np.empty((environment.observation_space.size,)*len(environment.sense_ang) + (len(environment.action_space),))
     Q_table[:] = np.NaN
-else:
-    with open(load_Q_table, "rb") as f:
-        Q_table = pickle.load(f)
 
 # Loop for each episode
 episode_rewards = []
@@ -116,7 +111,7 @@ moving_avg = []
 for episode in range(episode_final):
     
     # display this episode
-    show = True if not episode % episode_vis and episode > 0 else False
+    show = True if not episode % episode_vis else False
 
     # run episode
     epsilon = epsilon_fun(episode)
@@ -126,9 +121,13 @@ for episode in range(episode_final):
     episode_rewards.append(episode_reward)
     moving_avg.append(np.mean(episode_rewards[-episode_vis:]))
     if show:
-        print(f"Episode {episode}: epsilon is {epsilon:.3f}, {episode_vis} ep mean is {moving_avg[-1]}")
+        print(f"Episode {episode}: epsilon is {epsilon:.3f}, {episode_vis} ep mean is {moving_avg[-1]:.3f}")
 
-# Visulaise results
+# after all episodes
+print("All episodes done")
+np.save("Q_table", Q_table)
+
+# Visualise results
 eps = list(range(episode_final))
 fig, ax1 = plt.subplots()
 ax1.set_xlabel("Episode")
@@ -143,6 +142,3 @@ ax2.set_ylabel(f"Reward {episode_vis}ma", color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 fig.tight_layout()
 plt.show()
-
-# with open(f"qtable-{int(time.time())}.pickle", "wb") as f:
-#     pickle.dump(Q_table, f)
