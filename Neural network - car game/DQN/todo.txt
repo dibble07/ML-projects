@@ -1,8 +1,6 @@
 learning:
-learn to stop at edge of track
-learn to turn corner
-learn to do lap
-learn to do lap fast - refactor code
+convert to Deep Q learning
+learn to do lap fast
 multiple frames to learn time derivatives
 
 physics:

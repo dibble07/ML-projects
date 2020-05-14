@@ -4,68 +4,14 @@ import random
 from PIL import Image
 import cv2
 from shapely.geometry import Polygon, Point, LinearRing, LineString
-# from tf_agents.environments import py_environment
-# from tf_agents.specs import array_spec
-# from tf_agents.trajectories import time_step as ts
-
-# class CardGameEnv(py_environment.PyEnvironment):
-
-#   def __init__(self):
-#     self._action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=1, name='action')
-#     self._observation_spec = array_spec.BoundedArraySpec(shape=(1,), dtype=np.int32, minimum=0, name='observation')
-#     self._state = 21
-#     self._episode_ended = False
-
-#   def action_spec(self):
-#     return self._action_spec
-
-#   def observation_spec(self):
-#     return self._observation_spec
-
-#   def _reset(self):
-#     self._state = 21
-#     self._episode_ended = False
-#     return ts.restart(np.array([self._state], dtype=np.int32))
-
-#   def _step(self, action):
-
-#     if self._episode_ended:
-#       return self.reset()
-
-#     if action == 0:
-#       new_card = -4
-#       self._state += new_card
-#     elif action == 1:
-#       self._episode_ended = True
-
-#     if self._episode_ended or self._state <= 0:
-#       reward = -self._state if self._state > 0 else -21
-#       return ts.termination(np.array([self._state], dtype=np.int32), reward)
-#     else:
-#       reward = 0
-#       return ts.transition(np.array([self._state], dtype=np.int32), reward, discount=1.0)
 
 class CarGameEnv:
 
 	def __init__(self):
-		# misc
-		self.viewer = None
-		self.win_sz = (416,416)
-		self.win_diag = (self.win_sz[0]**2+self.win_sz[1]**2)**0.5
-		temp=[]
-		for rot in [0, -1, 1]:
-			for trans in [1]:#, 0, -1
-				temp.append((trans, rot))
-		# temp = [(1,0), (0,1)]
-		self.action_space = temp
-		self.observation_space = np.arange(0,1,0.1)
-		self.patience = 10
-		self.lap_targ = 1
-		self.loc_mem_sz = 50
 		# initialise track
-		# track_coords = [(100, 300), (100, 100), (200,100), (200,200), (300, 200), (300, 100), (500, 100), (500, 200), (400, 300), (500, 400), (500, 500), (200, 500), (200, 400)]
-		track_coords = [(100, 100), (100, 300), (300, 300), (300, 100), (100, 100)]
-		track_width = 30
+		# track_coords = [(100, 200), (100, 500), (500, 500), (500, 100), (100, 100)]
+		track_coords = [(100, 200), (100, 500), (500, 500), (500, 400), (400, 250), (500, 100), (100, 100)]
+		track_width = 40
 		self.middle_poly = Polygon(track_coords)
 		self.middle_lin = LinearRing(self.middle_poly.exterior.coords)
 		temp_coords = self.unique_wrap([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
@@ -86,6 +32,19 @@ class CarGameEnv:
 		self.fvel = 4
 		self.rvel = 360/8
 		self.sz = (16, 32)
+		# misc
+		self.viewer = None
+		self.win_sz = (608,608)
+		self.win_diag = (self.win_sz[0]**2+self.win_sz[1]**2)**0.5
+		temp=[]
+		for rot in [0, -1, 1]:
+			for trans in [1]:#, 0, -1
+				temp.append((trans, rot))
+		self.action_space = temp
+		self.observation_space = [np.sort(np.unique(np.concatenate((np.arange(0,0.4,0.05), np.arange(0.1,1,0.3)))))]*len(self.sense_ang)
+		self.patience = 10
+		self.lap_targ = 1
+		self.loc_mem_sz = 50
 		# reset
 		self.reset()
 
@@ -105,7 +64,7 @@ class CarGameEnv:
 		self.pos_analyse()
 		self.score_analyse()
 
-		return self.obs_ind
+		return self.obs
 
 	def step(self, action):
 
@@ -125,7 +84,7 @@ class CarGameEnv:
 		if self.finished_course or not self.on_course or (self.frame_curr - self.score_max_frame) >= self.patience:
 			self.finished_episode = True
 
-		return self.obs_ind, self.score-self.score_prev, self.finished_episode
+		return self.obs, self.score-self.score_prev, self.finished_episode
 
 	def score_analyse(self):
 		self.score_prev = self.score
@@ -228,8 +187,8 @@ class CarGameEnv:
 				line_min.append(line_angle_min)
 			else:
 				line_min.append([(x, y) for x,y in zip(*line_angle_min.xy)])
-		# self.sense_dist = dist_min
-		self.obs_ind = tuple(np.argmin(np.abs(self.observation_space-dist_i/self.win_diag)) for dist_i in dist_min)
+		self.sense_dist = dist_min
+		self.obs = [dist/self.win_diag for dist in self.sense_dist]
 		self.sense_lin = line_min
 
 	def unique_wrap(self, list_in):
@@ -305,6 +264,7 @@ class CarGameEnv:
 		return self.viewer.render(return_rgb_array = True)
 
 class Blob:
+
 	def __init__(self, size, colour):
 		self.size = size
 		self.x = np.random.randint(0, size)
@@ -365,12 +325,15 @@ class Blob:
 			self.y = self.size-1
 
 class BlobEnv:
+
 	def __init__(self, size):
 		self.SIZE = 6
 		self.RETURN_IMAGES = False
 		self.MOVE_PENALTY = 1
 		self.ENEMY_PENALTY = 300
 		self.FOOD_REWARD = 25
+		self.observation_space = [np.arange(-(size-1),size)]*4
+		self.action_space = list(range(9))
 
 	def reset(self):
 		self.player = Blob(self.SIZE, (255, 175, 0))
@@ -406,7 +369,7 @@ class BlobEnv:
 			reward = -self.MOVE_PENALTY
 
 		done = False
-		if reward == self.FOOD_REWARD or reward == -self.ENEMY_PENALTY or self.episode_step >= 200:
+		if reward == self.FOOD_REWARD or reward == -self.ENEMY_PENALTY or self.episode_step >= 100:
 			done = True
 
 		return new_observation, reward, done
