@@ -24,7 +24,7 @@ MIN_REWARD = -200  # For model save
 MEMORY_FRACTION = 0.20
 
 # Environment settings
-EPISODES = 20_000
+EPISODES = 1_000
 
 # Exploration settings
 epsilon = 1  # not a constant, going to be decayed
@@ -103,12 +103,13 @@ class Blob:
 
 
 class BlobEnv:
-    SIZE = 10
-    RETURN_IMAGES = True
+    SIZE = 6
+    RETURN_IMAGES = False
     MOVE_PENALTY = 1
     ENEMY_PENALTY = 300
     FOOD_REWARD = 25
-    OBSERVATION_SPACE_VALUES = (SIZE, SIZE, 3)  # 4
+    # OBSERVATION_SPACE_VALUES = (SIZE, SIZE, 3)
+    OBSERVATION_SPACE_VALUES = (4,)
     ACTION_SPACE_SIZE = 9
     PLAYER_N = 1  # player key in dict
     FOOD_N = 2  # food key in dict
@@ -263,18 +264,19 @@ class DQNAgent:
     def create_model(self):
         model = Sequential()
 
-        model.add(Conv2D(256, (3, 3), input_shape=env.OBSERVATION_SPACE_VALUES))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.2))
+        # model.add(Conv2D(256, (3, 3), input_shape=env.OBSERVATION_SPACE_VALUES))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
+        # model.add(Activation('relu'))
+        # model.add(MaxPooling2D(pool_size=(2, 2)))
+        # model.add(Dropout(0.2))
 
-        model.add(Conv2D(256, (3, 3)))
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.2))
+        # model.add(Conv2D(256, (3, 3)))
+        # model.add(Activation('relu'))
+        # model.add(MaxPooling2D(pool_size=(2, 2)))
+        # model.add(Dropout(0.2))
 
-        model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
-        model.add(Dense(64))
+        # model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
+        # model.add(Dense(64))
+        model.add(Dense(64, input_shape=env.OBSERVATION_SPACE_VALUES))
 
         model.add(Dense(env.ACTION_SPACE_SIZE, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
         model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])
@@ -340,7 +342,8 @@ class DQNAgent:
 
     # Queries main network for Q values given current observation space (environment state)
     def get_qs(self, state):
-        return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
+        return self.model.predict(np.asarray(state).reshape(-1, 4)/(env.SIZE-1))[0]
+        # return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
 
 
 agent = DQNAgent()
