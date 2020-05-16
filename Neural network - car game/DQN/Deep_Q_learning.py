@@ -1,369 +1,192 @@
-import numpy as np
-import keras.backend.tensorflow_backend as backend
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Activation, Flatten
-from keras.optimizers import Adam
-import tensorflow as tf
+# Import libraries
 from collections import deque
-import time
-import random
-from tqdm import tqdm
-import os
-from PIL import Image
-import cv2
-from homegym import BlobEnv
-
+from homegym import BlobEnv, CarGameEnv
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import Adam
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib import style
 style.use("ggplot")
+import numpy as np
+np.random.seed(42)
+import os
+import random
+random.seed(42)
+import tensorflow as tf
+tf.random.set_seed(42)
 
-DISCOUNT = 0.99
-REPLAY_MEMORY_SIZE = 10_000  # How many last steps to keep for model training
-MIN_REPLAY_MEMORY_SIZE = 100  # Minimum number of steps in a memory to start training
-MINIBATCH_SIZE = 64  # How many steps (samples) to use for training
-UPDATE_TARGET_EVERY = 5  # Terminal states (end of episodes)
-MODEL_NAME = '2x256'
-MIN_REWARD = -200  # For model save
+print("""
+    To do:
+Redo model saving policy
+""")
 
-# Environment settings
-EPISODES = 2_000
+# Define user functions/classes
+def epsilon_fun(eps_in):
+    if isinstance(eps_in, list):
+        eps = eps_in
+    else:
+        eps = [eps_in]
+    epsilon = []
+    eps_range = epsilon_init - epsilon_final
+    for ep in eps:
+        if ep < epsilon_init_ep:
+            epsilon.append(0)
+        else:
+            epsilon.append(eps_range*np.exp(-epsilon_decay*(ep-epsilon_init_ep))+epsilon_final)
+    output = epsilon[0] if len(epsilon) == 1 else epsilon
+    return output
 
-# Exploration settings
-epsilon = 1  # not a constant, going to be decayed
-EPSILON_DECAY = 0.99975
-MIN_EPSILON = 0.001
+def episode_fun(env_in, epsilon_in, agent_in, update_Q, show_in):
+    # reset episode
+    current_state = env_in.reset()
+    episode_reward = 0
+    step_count = 0
+    done = False
+    while not done:
 
-#  Stats settings
-AGGREGATE_STATS_EVERY = 100  # episodes
-SHOW_PREVIEW = False
+        # take action
+        if np.random.random() > epsilon_in:
+            action = np.argmax(agent.get_qs(current_state))
+        else:
+            action = np.random.randint(0, len(env_in.action_space))
+        new_state, reward, done = env_in.step(action)
 
+        # update Q model
+        if update_Q:
+            agent_in.update_replay_memory((current_state, action, reward, new_state, done))
+            agent_in.train(done)
 
-# class Blob:
-#     def __init__(self, size):
-#         self.size = size
-#         self.x = np.random.randint(0, size)
-#         self.y = np.random.randint(0, size)
+        # prepare for next step
+        episode_reward += reward
+        current_state = new_state
 
-#     def __str__(self):
-#         return f"Blob ({self.x}, {self.y})"
+        # render if desired
+        if show_in:
+            env_in.render()
 
-#     def __sub__(self, other):
-#         return (self.x-other.x, self.y-other.y)
+    return agent_in, episode_reward
 
-#     def __eq__(self, other):
-#         return self.x == other.x and self.y == other.y
+class DQN_agent:
 
-#     def action(self, choice):
-#         '''
-#         Gives us 9 total movement options. (0,1,2,3,4,5,6,7,8)
-#         '''
-#         if choice == 0:
-#             self.move(x=1, y=1)
-#         elif choice == 1:
-#             self.move(x=-1, y=-1)
-#         elif choice == 2:
-#             self.move(x=-1, y=1)
-#         elif choice == 3:
-#             self.move(x=1, y=-1)
-
-#         elif choice == 4:
-#             self.move(x=1, y=0)
-#         elif choice == 5:
-#             self.move(x=-1, y=0)
-
-#         elif choice == 6:
-#             self.move(x=0, y=1)
-#         elif choice == 7:
-#             self.move(x=0, y=-1)
-
-#         elif choice == 8:
-#             self.move(x=0, y=0)
-
-#     def move(self, x=False, y=False):
-
-#         # If no value for x, move randomly
-#         if not x:
-#             self.x += np.random.randint(-1, 2)
-#         else:
-#             self.x += x
-
-#         # If no value for y, move randomly
-#         if not y:
-#             self.y += np.random.randint(-1, 2)
-#         else:
-#             self.y += y
-
-#         # If we are out of bounds, fix!
-#         if self.x < 0:
-#             self.x = 0
-#         elif self.x > self.size-1:
-#             self.x = self.size-1
-#         if self.y < 0:
-#             self.y = 0
-#         elif self.y > self.size-1:
-#             self.y = self.size-1
-
-
-# class BlobEnv:
-#     SIZE = 4
-#     RETURN_IMAGES = False
-#     MOVE_PENALTY = 1
-#     ENEMY_PENALTY = 300
-#     FOOD_REWARD = 25
-#     # OBSERVATION_SPACE_VALUES = (SIZE, SIZE, 3)
-#     OBSERVATION_SPACE_VALUES = (4,)
-#     ACTION_SPACE_SIZE = 9
-#     PLAYER_N = 1  # player key in dict
-#     FOOD_N = 2  # food key in dict
-#     ENEMY_N = 3  # enemy key in dict
-#     # the dict! (colors)
-#     d = {1: (255, 175, 0),
-#          2: (0, 255, 0),
-#          3: (0, 0, 255)}
-
-#     def reset(self):
-#         self.player = Blob(self.SIZE)
-#         self.food = Blob(self.SIZE)
-#         while self.food == self.player:
-#             self.food = Blob(self.SIZE)
-#         self.enemy = Blob(self.SIZE)
-#         while self.enemy == self.player or self.enemy == self.food:
-#             self.enemy = Blob(self.SIZE)
-
-#         self.episode_step = 0
-
-#         if self.RETURN_IMAGES:
-#             observation = np.array(self.get_image())
-#         else:
-#             observation = (self.player-self.food) + (self.player-self.enemy)
-#         return observation
-
-#     def step(self, action):
-#         self.episode_step += 1
-#         self.player.action(action)
-
-#         #### MAYBE ###
-#         #enemy.move()
-#         #food.move()
-#         ##############
-
-#         if self.RETURN_IMAGES:
-#             new_observation = np.array(self.get_image())
-#         else:
-#             new_observation = (self.player-self.food) + (self.player-self.enemy)
-
-#         if self.player == self.enemy:
-#             reward = -self.ENEMY_PENALTY
-#         elif self.player == self.food:
-#             reward = self.FOOD_REWARD
-#         else:
-#             reward = -self.MOVE_PENALTY
-
-#         done = False
-#         if reward == self.FOOD_REWARD or reward == -self.ENEMY_PENALTY or self.episode_step >= 100:
-#             done = True
-
-#         return new_observation, reward, done
-
-#     def render(self):
-#         img = self.get_image()
-#         img = img.resize((300, 300))  # resizing so we can see our agent in all its glory.
-#         cv2.imshow("image", np.array(img))  # show it!
-#         cv2.waitKey(1)
-
-#     # FOR CNN #
-#     def get_image(self):
-#         env = np.zeros((self.SIZE, self.SIZE, 3), dtype=np.uint8)  # starts an rbg of our size
-#         env[self.food.x][self.food.y] = self.d[self.FOOD_N]  # sets the food location tile to green color
-#         env[self.enemy.x][self.enemy.y] = self.d[self.ENEMY_N]  # sets the enemy location to red
-#         env[self.player.x][self.player.y] = self.d[self.PLAYER_N]  # sets the player tile to blue
-#         img = Image.fromarray(env, 'RGB')  # reading to rgb. Apparently. Even tho color definitions are bgr. ???
-#         return img
-
-
-env = BlobEnv(5)
-
-# For stats
-ep_rewards = [-200]
-
-# For more repetitive results
-random.seed(1)
-np.random.seed(1)
-# tf.set_random_seed(1)
-
-# Create models folder
-if not os.path.isdir('models'):
-    os.makedirs('models')
-
-# Agent class
-class DQNAgent:
     def __init__(self):
-
-        # Main model
         self.model = self.create_model()
-
-        # Target network
         self.target_model = self.create_model()
         self.target_model.set_weights(self.model.get_weights())
-
-        # An array with last n steps for training
-        self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
-
-        # Used to count when to update target network with main network's weights
+        self.replay_memory = deque(maxlen=replay_memory_sz)
         self.target_update_counter = 0
 
     def create_model(self):
         model = Sequential()
-
-        # model.add(Conv2D(256, (3, 3), input_shape=env.OBSERVATION_SPACE_VALUES))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
-        # model.add(Activation('relu'))
-        # model.add(MaxPooling2D(pool_size=(2, 2)))
-        # model.add(Dropout(0.2))
-
-        # model.add(Conv2D(256, (3, 3)))
-        # model.add(Activation('relu'))
-        # model.add(MaxPooling2D(pool_size=(2, 2)))
-        # model.add(Dropout(0.2))
-
-        # model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
-        # model.add(Dense(64))
-        model.add(Dense(64, input_shape=(len(env.observation_space),)))
-
-        model.add(Dense(len(env.action_space), activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
+        model.add(Dense(64, input_shape=(len(environment.observation_space),)))
+        model.add(Dense(16, activation='relu'))
+        model.add(Dense(len(environment.action_space), activation='linear'))
         model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])
         return model
 
-    # Adds step's data to a memory replay array
-    # (observation space, action, reward, new observation space, done)
     def update_replay_memory(self, transition):
         self.replay_memory.append(transition)
 
-    # Trains main network every step during episode
-    def train(self, terminal_state, step):
+    def train(self, terminal_state):
 
-        # Start training only if certain number of samples is already saved
-        if len(self.replay_memory) < MIN_REPLAY_MEMORY_SIZE:
-            return
+        if len(self.replay_memory) >= replay_memory_sz_min:
 
-        # Get a minibatch of random samples from memory replay table
-        minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
+            # Get a minibatch and associated Q values
+            minibatch = random.sample(self.replay_memory, minibatch_sz)
+            current_states = np.array([transition[0] for transition in minibatch])
+            current_qs_list = self.model.predict(current_states)
+            new_current_states = np.array([transition[3] for transition in minibatch])
+            future_qs_list = self.target_model.predict(new_current_states)
 
-        # Get current states from minibatch, then query NN model for Q values
-        current_states = np.array([transition[0] for transition in minibatch])/255
-        current_qs_list = self.model.predict(current_states)
+            # Loop through experiences
+            X = []
+            y = []
+            for index, (current_state, action, reward, new_current_state, done) in enumerate(minibatch):
+                if not done:
+                    max_future_q = np.max(future_qs_list[index])
+                    new_q = reward + discount * max_future_q
+                else:
+                    new_q = reward
+                current_qs = current_qs_list[index]
+                current_qs[action] = new_q
+                X.append(current_state)
+                y.append(current_qs)
 
-        # Get future states from minibatch, then query NN model for Q values
-        # When using target network, query it, otherwise main network should be queried
-        new_current_states = np.array([transition[3] for transition in minibatch])/255
-        future_qs_list = self.target_model.predict(new_current_states)
+            # Fit model
+            if terminal_state:
+                self.model.fit(np.array(X), np.array(y), batch_size=minibatch_sz, verbose=0, shuffle=False)
+                self.target_update_counter += 1
 
-        X = []
-        y = []
+            # Update target network
+            if self.target_update_counter >= update_target_freq:
+                self.target_model.set_weights(self.model.get_weights())
+                self.target_update_counter = 0
 
-        # Now we need to enumerate our batches
-        for index, (current_state, action, reward, new_current_state, done) in enumerate(minibatch):
+        return
 
-            # If not a terminal state, get new q from future states, otherwise set it to 0
-            # almost like with Q Learning, but we use just part of equation here
-            if not done:
-                max_future_q = np.max(future_qs_list[index])
-                new_q = reward + DISCOUNT * max_future_q
-            else:
-                new_q = reward
-
-            # Update Q value for given state
-            current_qs = current_qs_list[index]
-            current_qs[action] = new_q
-
-            # And append to our training data
-            X.append(current_state)
-            y.append(current_qs)
-
-        # Fit on all samples as one batch, log only on terminal state
-        self.model.fit(np.array(X)/255, np.array(y), batch_size=MINIBATCH_SIZE, verbose=0, shuffle=False if terminal_state else None)
-
-        # Update target network counter every episode
-        if terminal_state:
-            self.target_update_counter += 1
-
-        # If counter reaches set value, update target network with weights of main network
-        if self.target_update_counter > UPDATE_TARGET_EVERY:
-            self.target_model.set_weights(self.model.get_weights())
-            self.target_update_counter = 0
-
-    # Queries main network for Q values given current observation space (environment state)
     def get_qs(self, state):
-        return self.model.predict(np.asarray(state).reshape(-1, 4)/(env.SIZE-1))[0]
-        # return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
+        return self.model.predict(np.asarray(state).reshape(-1, len(environment.observation_space)))[0]
 
+# Initialise variables and environment
+episode_final = 20_000
+episode_eval_freq = 100
+episode_eval_dur = 1
+episode_length = float('inf')
+eval_vis = True
 
-agent = DQNAgent()
+epsilon_init_ep = 5_000
+epsilon_init = 0.1
+epsilon_final = 0.01
+epsilon_decay = 0.001
 
-# Iterate over episodes
-eval_episode = []
-average_reward = []
-min_reward = []
-max_reward = []
-# for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
-for episode in range(1, EPISODES + 1):
+discount = 0.95
 
-    # Restarting episode - reset episode reward and step number
-    episode_reward = 0
-    step = 1
+replay_memory_sz = 10_000
+replay_memory_sz_min = 1_000
+minibatch_sz = 64
+update_target_freq = 5
 
-    # Reset environment and get initial state
-    current_state = env.reset()
+environment = CarGameEnv()
+# environment = BlobEnv(5)
+agent = DQN_agent()
 
-    # Reset flag and start iterating until episode ends
-    done = False
-    while not done:
+# Loop for each episode
+evaluation_episodes = []
+evaluation_rewards = []
+for episode in range(episode_final):
 
-        # This part stays mostly the same, the change is to query a model for Q values
-        if np.random.random() > epsilon:
-            # Get action from Q table
-            action = np.argmax(agent.get_qs(current_state))
-        else:
-            # Get random action
-            action = np.random.randint(0, len(env.action_space))
+    # run episode
+    epsilon = epsilon_fun(episode)
+    agent, __ = episode_fun(environment, epsilon, agent, True, False)
 
-        new_state, reward, done = env.step(action)
-
-        # Transform new continous state to new discrete state and count reward
-        episode_reward += reward
-
-        if SHOW_PREVIEW and not episode % AGGREGATE_STATS_EVERY:
-            env.render()
-
-        # Every step we update replay memory and train main network
-        agent.update_replay_memory((current_state, action, reward, new_state, done))
-        agent.train(done, step)
-
-        current_state = new_state
-        step += 1
-
-    # Append episode reward to a list and log stats (every given number of episodes)
-    ep_rewards.append(episode_reward)
-    if not episode % AGGREGATE_STATS_EVERY or episode == 1:
-        eval_episode.append(episode)
-        average_reward.append(sum(ep_rewards[-AGGREGATE_STATS_EVERY:])/len(ep_rewards[-AGGREGATE_STATS_EVERY:]))
-        min_reward.append(min(ep_rewards[-AGGREGATE_STATS_EVERY:]))
-        max_reward.append(max(ep_rewards[-AGGREGATE_STATS_EVERY:]))
-        print(eval_episode[-1],average_reward[-1],min_reward[-1],max_reward[-1])
-
+    # evaluate
+    if not episode % episode_eval_freq or episode+1 == episode_final:
+        reward_eval_tot = 0
+        for __ in range(episode_eval_dur):
+            __, episode_reward = episode_fun(environment, 0, agent, False, eval_vis)
+            reward_eval_tot += episode_reward
+        reward_eval_avg = reward_eval_tot/episode_eval_dur
+        print(f"Episode {episode}: epsilon is {epsilon_fun(episode):.3f}, reward is {reward_eval_avg:.3f}")
+        evaluation_rewards.append(reward_eval_avg)
+        evaluation_episodes.append(episode)
         # Save model, but only when min reward is greater or equal a set value
-        if min_reward[-1] >= MIN_REWARD:
-            agent.model.save(f'models/{MODEL_NAME}__{max_reward[-1]:_>7.2f}max_{average_reward[-1]:_>7.2f}avg_{min_reward[-1]:_>7.2f}min__{int(time.time())}.model')
+        # if min_reward[-1] >= MIN_REWARD:
+        #     agent.model.save(f'models/{MODEL_NAME}__{average_reward[-1]:_>7.2f}avg_{std_dev_reward[-1]:_>7.2f}std_dev__{int(time.time())}.model')
 
-    # Decay epsilon
-    if epsilon > MIN_EPSILON:
-        epsilon *= EPSILON_DECAY
-        epsilon = max(MIN_EPSILON, epsilon)
-
-plt.plot(eval_episode, average_reward, label = 'average_reward')
-plt.plot(eval_episode, min_reward, label = 'min_reward')
-plt.plot(eval_episode, max_reward, label = 'max_reward')
+# Visualise results
+print("All episodes done")
+eps = list(range(episode_final))
+fig, ax1 = plt.subplots()
+ax1.set_xlabel("Episode")
+color = 'tab:red'
+ax1.plot(eps, epsilon_fun(eps), color=color)
+ax1.set_ylabel("Epsilon", color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+ax2 = ax1.twinx()
+color = 'tab:blue'
+ax2.plot(evaluation_episodes, evaluation_rewards, color=color)
+ax2.set_ylabel(f"Reward", color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+fig.tight_layout()
 plt.show()
-
-

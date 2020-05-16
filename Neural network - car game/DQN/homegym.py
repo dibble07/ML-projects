@@ -347,9 +347,9 @@ class BlobEnv:
 		self.episode_step = 0
 
 		if self.RETURN_IMAGES:
-			observation = np.array(self.get_image())
+			observation = np.array(self.get_image())/255
 		else:
-			observation = (self.player-self.food) + (self.player-self.enemy)
+			observation = tuple(i/(self.SIZE-1) for i in (self.player-self.food) + (self.player-self.enemy))
 		return observation
 
 	def step(self, action):
@@ -357,9 +357,10 @@ class BlobEnv:
 		self.player.action(action)
 
 		if self.RETURN_IMAGES:
-			new_observation = np.array(self.get_image())
+			new_observation = np.array(self.get_image())/255
 		else:
-			new_observation = (self.player-self.food) + (self.player-self.enemy)
+			new_observation = tuple(i/(self.SIZE-1) for i in (self.player-self.food) + (self.player-self.enemy))
+
 
 		if self.player == self.enemy:
 			reward = -self.ENEMY_PENALTY

@@ -1,4 +1,4 @@
-# import libraries
+# Import libraries
 import cv2
 from homegym import BlobEnv, CarGameEnv
 import matplotlib
@@ -35,7 +35,7 @@ def epsilon_fun(eps_in):
 def episode_fun(env_in, epsilon_in, Q_table_in, update_Q, show_in):
     # reset episode
     obs = env_in.reset()
-    obs_ind = tuple(np.argmin(np.abs(y-x)) for x, y in zip(obs, environment.observation_space))
+    obs_ind = tuple(np.argmin(np.abs(y-x)) for x, y in zip(obs, env_in.observation_space))
     episode_reward = 0
     step_count = 0
     done = False
@@ -53,10 +53,9 @@ def episode_fun(env_in, epsilon_in, Q_table_in, update_Q, show_in):
             else:
                 action = np.argmax(Q_table_obs)
         else:
-            action = np.random.randint(0, len(environment.action_space))
+            action = np.random.randint(0, len(env_in.action_space))
         new_obs, reward, done = env_in.step(action)
-        new_obs_ind = tuple(np.argmin(np.abs(y-x)) for x, y in zip(new_obs, environment.observation_space))
-
+        new_obs_ind = tuple(np.argmin(np.abs(y-x)) for x, y in zip(new_obs, env_in.observation_space))
 
         # update Q table
         if update_Q:
@@ -72,7 +71,7 @@ def episode_fun(env_in, epsilon_in, Q_table_in, update_Q, show_in):
                 new_q = (1 - learning_rate) * current_q + learning_rate * delta_q
             Q_table_in[obs_ind][action] = new_q
 
-        # prepare for next episode
+        # prepare for next step
         episode_reward += reward
         if step_count < episode_length:
             step_count += 1
@@ -82,7 +81,7 @@ def episode_fun(env_in, epsilon_in, Q_table_in, update_Q, show_in):
 
         # render if desired
         if show_in:
-            environment.render()
+            env_in.render()
 
     return Q_table_in, episode_reward
 
@@ -101,7 +100,7 @@ epsilon_decay = 0.001
 learning_rate = 0.1
 discount = 0.95
 environment = CarGameEnv()
-# environment = BlobEnv(6)
+# environment = BlobEnv(5)
 
 # Initialise Q table
 load_Q_table = None#"Q_table.npy"
