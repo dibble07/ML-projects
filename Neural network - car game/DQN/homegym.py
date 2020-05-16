@@ -327,7 +327,7 @@ class Blob:
 class BlobEnv:
 
 	def __init__(self, size):
-		self.SIZE = 6
+		self.SIZE = size
 		self.RETURN_IMAGES = False
 		self.MOVE_PENALTY = 1
 		self.ENEMY_PENALTY = 300

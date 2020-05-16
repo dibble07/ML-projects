@@ -3,7 +3,6 @@ import keras.backend.tensorflow_backend as backend
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Activation, Flatten
 from keras.optimizers import Adam
-from keras.callbacks import TensorBoard
 import tensorflow as tf
 from collections import deque
 import time
@@ -12,19 +11,24 @@ from tqdm import tqdm
 import os
 from PIL import Image
 import cv2
+from homegym import BlobEnv
 
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+from matplotlib import style
+style.use("ggplot")
 
 DISCOUNT = 0.99
-REPLAY_MEMORY_SIZE = 50_000  # How many last steps to keep for model training
-MIN_REPLAY_MEMORY_SIZE = 1_000  # Minimum number of steps in a memory to start training
+REPLAY_MEMORY_SIZE = 10_000  # How many last steps to keep for model training
+MIN_REPLAY_MEMORY_SIZE = 100  # Minimum number of steps in a memory to start training
 MINIBATCH_SIZE = 64  # How many steps (samples) to use for training
 UPDATE_TARGET_EVERY = 5  # Terminal states (end of episodes)
 MODEL_NAME = '2x256'
 MIN_REWARD = -200  # For model save
-MEMORY_FRACTION = 0.20
 
 # Environment settings
-EPISODES = 1_000
+EPISODES = 2_000
 
 # Exploration settings
 epsilon = 1  # not a constant, going to be decayed
@@ -32,154 +36,154 @@ EPSILON_DECAY = 0.99975
 MIN_EPSILON = 0.001
 
 #  Stats settings
-AGGREGATE_STATS_EVERY = 50  # episodes
+AGGREGATE_STATS_EVERY = 100  # episodes
 SHOW_PREVIEW = False
 
 
-class Blob:
-    def __init__(self, size):
-        self.size = size
-        self.x = np.random.randint(0, size)
-        self.y = np.random.randint(0, size)
+# class Blob:
+#     def __init__(self, size):
+#         self.size = size
+#         self.x = np.random.randint(0, size)
+#         self.y = np.random.randint(0, size)
 
-    def __str__(self):
-        return f"Blob ({self.x}, {self.y})"
+#     def __str__(self):
+#         return f"Blob ({self.x}, {self.y})"
 
-    def __sub__(self, other):
-        return (self.x-other.x, self.y-other.y)
+#     def __sub__(self, other):
+#         return (self.x-other.x, self.y-other.y)
 
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+#     def __eq__(self, other):
+#         return self.x == other.x and self.y == other.y
 
-    def action(self, choice):
-        '''
-        Gives us 9 total movement options. (0,1,2,3,4,5,6,7,8)
-        '''
-        if choice == 0:
-            self.move(x=1, y=1)
-        elif choice == 1:
-            self.move(x=-1, y=-1)
-        elif choice == 2:
-            self.move(x=-1, y=1)
-        elif choice == 3:
-            self.move(x=1, y=-1)
+#     def action(self, choice):
+#         '''
+#         Gives us 9 total movement options. (0,1,2,3,4,5,6,7,8)
+#         '''
+#         if choice == 0:
+#             self.move(x=1, y=1)
+#         elif choice == 1:
+#             self.move(x=-1, y=-1)
+#         elif choice == 2:
+#             self.move(x=-1, y=1)
+#         elif choice == 3:
+#             self.move(x=1, y=-1)
 
-        elif choice == 4:
-            self.move(x=1, y=0)
-        elif choice == 5:
-            self.move(x=-1, y=0)
+#         elif choice == 4:
+#             self.move(x=1, y=0)
+#         elif choice == 5:
+#             self.move(x=-1, y=0)
 
-        elif choice == 6:
-            self.move(x=0, y=1)
-        elif choice == 7:
-            self.move(x=0, y=-1)
+#         elif choice == 6:
+#             self.move(x=0, y=1)
+#         elif choice == 7:
+#             self.move(x=0, y=-1)
 
-        elif choice == 8:
-            self.move(x=0, y=0)
+#         elif choice == 8:
+#             self.move(x=0, y=0)
 
-    def move(self, x=False, y=False):
+#     def move(self, x=False, y=False):
 
-        # If no value for x, move randomly
-        if not x:
-            self.x += np.random.randint(-1, 2)
-        else:
-            self.x += x
+#         # If no value for x, move randomly
+#         if not x:
+#             self.x += np.random.randint(-1, 2)
+#         else:
+#             self.x += x
 
-        # If no value for y, move randomly
-        if not y:
-            self.y += np.random.randint(-1, 2)
-        else:
-            self.y += y
+#         # If no value for y, move randomly
+#         if not y:
+#             self.y += np.random.randint(-1, 2)
+#         else:
+#             self.y += y
 
-        # If we are out of bounds, fix!
-        if self.x < 0:
-            self.x = 0
-        elif self.x > self.size-1:
-            self.x = self.size-1
-        if self.y < 0:
-            self.y = 0
-        elif self.y > self.size-1:
-            self.y = self.size-1
-
-
-class BlobEnv:
-    SIZE = 6
-    RETURN_IMAGES = False
-    MOVE_PENALTY = 1
-    ENEMY_PENALTY = 300
-    FOOD_REWARD = 25
-    # OBSERVATION_SPACE_VALUES = (SIZE, SIZE, 3)
-    OBSERVATION_SPACE_VALUES = (4,)
-    ACTION_SPACE_SIZE = 9
-    PLAYER_N = 1  # player key in dict
-    FOOD_N = 2  # food key in dict
-    ENEMY_N = 3  # enemy key in dict
-    # the dict! (colors)
-    d = {1: (255, 175, 0),
-         2: (0, 255, 0),
-         3: (0, 0, 255)}
-
-    def reset(self):
-        self.player = Blob(self.SIZE)
-        self.food = Blob(self.SIZE)
-        while self.food == self.player:
-            self.food = Blob(self.SIZE)
-        self.enemy = Blob(self.SIZE)
-        while self.enemy == self.player or self.enemy == self.food:
-            self.enemy = Blob(self.SIZE)
-
-        self.episode_step = 0
-
-        if self.RETURN_IMAGES:
-            observation = np.array(self.get_image())
-        else:
-            observation = (self.player-self.food) + (self.player-self.enemy)
-        return observation
-
-    def step(self, action):
-        self.episode_step += 1
-        self.player.action(action)
-
-        #### MAYBE ###
-        #enemy.move()
-        #food.move()
-        ##############
-
-        if self.RETURN_IMAGES:
-            new_observation = np.array(self.get_image())
-        else:
-            new_observation = (self.player-self.food) + (self.player-self.enemy)
-
-        if self.player == self.enemy:
-            reward = -self.ENEMY_PENALTY
-        elif self.player == self.food:
-            reward = self.FOOD_REWARD
-        else:
-            reward = -self.MOVE_PENALTY
-
-        done = False
-        if reward == self.FOOD_REWARD or reward == -self.ENEMY_PENALTY or self.episode_step >= 200:
-            done = True
-
-        return new_observation, reward, done
-
-    def render(self):
-        img = self.get_image()
-        img = img.resize((300, 300))  # resizing so we can see our agent in all its glory.
-        cv2.imshow("image", np.array(img))  # show it!
-        cv2.waitKey(1)
-
-    # FOR CNN #
-    def get_image(self):
-        env = np.zeros((self.SIZE, self.SIZE, 3), dtype=np.uint8)  # starts an rbg of our size
-        env[self.food.x][self.food.y] = self.d[self.FOOD_N]  # sets the food location tile to green color
-        env[self.enemy.x][self.enemy.y] = self.d[self.ENEMY_N]  # sets the enemy location to red
-        env[self.player.x][self.player.y] = self.d[self.PLAYER_N]  # sets the player tile to blue
-        img = Image.fromarray(env, 'RGB')  # reading to rgb. Apparently. Even tho color definitions are bgr. ???
-        return img
+#         # If we are out of bounds, fix!
+#         if self.x < 0:
+#             self.x = 0
+#         elif self.x > self.size-1:
+#             self.x = self.size-1
+#         if self.y < 0:
+#             self.y = 0
+#         elif self.y > self.size-1:
+#             self.y = self.size-1
 
 
-env = BlobEnv()
+# class BlobEnv:
+#     SIZE = 4
+#     RETURN_IMAGES = False
+#     MOVE_PENALTY = 1
+#     ENEMY_PENALTY = 300
+#     FOOD_REWARD = 25
+#     # OBSERVATION_SPACE_VALUES = (SIZE, SIZE, 3)
+#     OBSERVATION_SPACE_VALUES = (4,)
+#     ACTION_SPACE_SIZE = 9
+#     PLAYER_N = 1  # player key in dict
+#     FOOD_N = 2  # food key in dict
+#     ENEMY_N = 3  # enemy key in dict
+#     # the dict! (colors)
+#     d = {1: (255, 175, 0),
+#          2: (0, 255, 0),
+#          3: (0, 0, 255)}
+
+#     def reset(self):
+#         self.player = Blob(self.SIZE)
+#         self.food = Blob(self.SIZE)
+#         while self.food == self.player:
+#             self.food = Blob(self.SIZE)
+#         self.enemy = Blob(self.SIZE)
+#         while self.enemy == self.player or self.enemy == self.food:
+#             self.enemy = Blob(self.SIZE)
+
+#         self.episode_step = 0
+
+#         if self.RETURN_IMAGES:
+#             observation = np.array(self.get_image())
+#         else:
+#             observation = (self.player-self.food) + (self.player-self.enemy)
+#         return observation
+
+#     def step(self, action):
+#         self.episode_step += 1
+#         self.player.action(action)
+
+#         #### MAYBE ###
+#         #enemy.move()
+#         #food.move()
+#         ##############
+
+#         if self.RETURN_IMAGES:
+#             new_observation = np.array(self.get_image())
+#         else:
+#             new_observation = (self.player-self.food) + (self.player-self.enemy)
+
+#         if self.player == self.enemy:
+#             reward = -self.ENEMY_PENALTY
+#         elif self.player == self.food:
+#             reward = self.FOOD_REWARD
+#         else:
+#             reward = -self.MOVE_PENALTY
+
+#         done = False
+#         if reward == self.FOOD_REWARD or reward == -self.ENEMY_PENALTY or self.episode_step >= 100:
+#             done = True
+
+#         return new_observation, reward, done
+
+#     def render(self):
+#         img = self.get_image()
+#         img = img.resize((300, 300))  # resizing so we can see our agent in all its glory.
+#         cv2.imshow("image", np.array(img))  # show it!
+#         cv2.waitKey(1)
+
+#     # FOR CNN #
+#     def get_image(self):
+#         env = np.zeros((self.SIZE, self.SIZE, 3), dtype=np.uint8)  # starts an rbg of our size
+#         env[self.food.x][self.food.y] = self.d[self.FOOD_N]  # sets the food location tile to green color
+#         env[self.enemy.x][self.enemy.y] = self.d[self.ENEMY_N]  # sets the enemy location to red
+#         env[self.player.x][self.player.y] = self.d[self.PLAYER_N]  # sets the player tile to blue
+#         img = Image.fromarray(env, 'RGB')  # reading to rgb. Apparently. Even tho color definitions are bgr. ???
+#         return img
+
+
+env = BlobEnv(5)
 
 # For stats
 ep_rewards = [-200]
@@ -189,57 +193,9 @@ random.seed(1)
 np.random.seed(1)
 # tf.set_random_seed(1)
 
-# Memory fraction, used mostly when trai8ning multiple agents
-#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=MEMORY_FRACTION)
-#backend.set_session(tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)))
-
 # Create models folder
 if not os.path.isdir('models'):
     os.makedirs('models')
-
-
-# Own Tensorboard class
-class ModifiedTensorBoard(TensorBoard):
-
-    # Overriding init to set initial step and writer (we want one log file for all .fit() calls)
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.step = 1
-        self.log_dir = 'test'
-        self._log_write_dir = 'test'
-        # self.writer = tf.summary.FileWriter(self.log_dir)
-        self.writer = tf.summary.create_file_writer(self.log_dir)
-
-    # Overriding this method to stop creating default log writer
-    def set_model(self, model):
-        pass
-
-    # Overrided, saves logs with our step number
-    # (otherwise every .fit() will start writing from 0th step)
-    def on_epoch_end(self, epoch, logs=None):
-        self.update_stats(**logs)
-
-    # Overrided
-    # We train for one batch only, no need to save anything at epoch end
-    def on_batch_end(self, batch, logs=None):
-        pass
-
-    # Overrided, so won't close writer
-    def on_train_end(self, _):
-        pass
-
-    # Custom method for saving own metrics
-    # Creates writer, writes custom metrics and closes writer
-    def update_stats(self, **stats):
-        self._write_logs(stats, self.step)
-
-    def _write_logs(self, logs, index):
-        with self.writer.as_default():
-            for name, value in logs.items():
-                tf.summary.scalar(name, value, step=index)
-                self.step += 1
-                self.writer.flush()
-
 
 # Agent class
 class DQNAgent:
@@ -254,9 +210,6 @@ class DQNAgent:
 
         # An array with last n steps for training
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
-
-        # Custom tensorboard object
-        self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
 
         # Used to count when to update target network with main network's weights
         self.target_update_counter = 0
@@ -276,9 +229,9 @@ class DQNAgent:
 
         # model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         # model.add(Dense(64))
-        model.add(Dense(64, input_shape=env.OBSERVATION_SPACE_VALUES))
+        model.add(Dense(64, input_shape=(len(env.observation_space),)))
 
-        model.add(Dense(env.ACTION_SPACE_SIZE, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
+        model.add(Dense(len(env.action_space), activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
         model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])
         return model
 
@@ -329,7 +282,7 @@ class DQNAgent:
             y.append(current_qs)
 
         # Fit on all samples as one batch, log only on terminal state
-        self.model.fit(np.array(X)/255, np.array(y), batch_size=MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if terminal_state else None)
+        self.model.fit(np.array(X)/255, np.array(y), batch_size=MINIBATCH_SIZE, verbose=0, shuffle=False if terminal_state else None)
 
         # Update target network counter every episode
         if terminal_state:
@@ -349,10 +302,12 @@ class DQNAgent:
 agent = DQNAgent()
 
 # Iterate over episodes
-for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
-
-    # Update tensorboard step every episode
-    agent.tensorboard.step = episode
+eval_episode = []
+average_reward = []
+min_reward = []
+max_reward = []
+# for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
+for episode in range(1, EPISODES + 1):
 
     # Restarting episode - reset episode reward and step number
     episode_reward = 0
@@ -371,7 +326,7 @@ for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
             action = np.argmax(agent.get_qs(current_state))
         else:
             # Get random action
-            action = np.random.randint(0, env.ACTION_SPACE_SIZE)
+            action = np.random.randint(0, len(env.action_space))
 
         new_state, reward, done = env.step(action)
 
@@ -391,16 +346,24 @@ for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
     # Append episode reward to a list and log stats (every given number of episodes)
     ep_rewards.append(episode_reward)
     if not episode % AGGREGATE_STATS_EVERY or episode == 1:
-        average_reward = sum(ep_rewards[-AGGREGATE_STATS_EVERY:])/len(ep_rewards[-AGGREGATE_STATS_EVERY:])
-        min_reward = min(ep_rewards[-AGGREGATE_STATS_EVERY:])
-        max_reward = max(ep_rewards[-AGGREGATE_STATS_EVERY:])
-        agent.tensorboard.update_stats(reward_avg=average_reward, reward_min=min_reward, reward_max=max_reward, epsilon=epsilon)
+        eval_episode.append(episode)
+        average_reward.append(sum(ep_rewards[-AGGREGATE_STATS_EVERY:])/len(ep_rewards[-AGGREGATE_STATS_EVERY:]))
+        min_reward.append(min(ep_rewards[-AGGREGATE_STATS_EVERY:]))
+        max_reward.append(max(ep_rewards[-AGGREGATE_STATS_EVERY:]))
+        print(eval_episode[-1],average_reward[-1],min_reward[-1],max_reward[-1])
 
         # Save model, but only when min reward is greater or equal a set value
-        if min_reward >= MIN_REWARD:
-            agent.model.save(f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+        if min_reward[-1] >= MIN_REWARD:
+            agent.model.save(f'models/{MODEL_NAME}__{max_reward[-1]:_>7.2f}max_{average_reward[-1]:_>7.2f}avg_{min_reward[-1]:_>7.2f}min__{int(time.time())}.model')
 
     # Decay epsilon
     if epsilon > MIN_EPSILON:
         epsilon *= EPSILON_DECAY
         epsilon = max(MIN_EPSILON, epsilon)
+
+plt.plot(eval_episode, average_reward, label = 'average_reward')
+plt.plot(eval_episode, min_reward, label = 'min_reward')
+plt.plot(eval_episode, max_reward, label = 'max_reward')
+plt.show()
+
+
