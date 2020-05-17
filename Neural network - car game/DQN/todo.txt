@@ -1,5 +1,6 @@
 learning:
-convert to Deep Q learning
+learn to do lap - maybe breakdown into learning skills
+Add all action options - initiate from previous best
 learn to do lap fast
 multiple frames to learn time derivatives
 
@@ -10,5 +11,5 @@ grip limits
 tyre degradation
 fuel use
 remaining laps
-race driver differences - sensing array, learning rate, memory
+race driver differences - sensing array, exploration, memory
 turning head/sesnsor array

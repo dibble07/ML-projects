@@ -27,10 +27,10 @@ class CarGameEnv:
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 		# initialise car
-		self.sense_ang = np.linspace(-45, 45, num=3, endpoint = True)
+		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
 		self.bvel = -2
-		self.fvel = 4
-		self.rvel = 360/8
+		self.fvel = 5
+		self.rvel = 360/18
 		self.sz = (16, 32)
 		# misc
 		self.viewer = None
@@ -66,31 +66,31 @@ class CarGameEnv:
 
 		return self.obs
 
-	def step(self, action):
+	def step(self, action_ind):
 
 		if self.finished_episode:
 			return self.reset()
 
-		# if action == 1:
-		# 	self.finished_episode = True
-		# 	for_unit, bear_unit = 0, 0
-		# else:
-		# 	for_unit, bear_unit = self.action_space[action]
-		for_unit, bear_unit = self.action_space[action]
-		if bear_unit != 0 or for_unit != 0:
-			self.move(bear_unit, for_unit)
-		self.frame_curr +=1
-		self.score_analyse()
-		if self.finished_course or not self.on_course or (self.frame_curr - self.score_max_frame) >= self.patience:
+		action = self.action_space[action_ind]
+		if action is None:
 			self.finished_episode = True
+		else:
+			for_unit, bear_unit = action
+			for_unit, bear_unit = self.action_space[action_ind]
+			if bear_unit != 0 or for_unit != 0:
+				self.move(bear_unit, for_unit)
+			self.frame_curr +=1
+			self.score_analyse()
+			if self.finished_course or not self.on_course or (self.frame_curr - self.score_max_frame) >= self.patience:
+				self.finished_episode = True
 
 		return self.obs, self.score-self.score_prev, self.finished_episode
 
 	def score_analyse(self):
 		self.score_prev = self.score
-		self.score = self.lap_float/self.lap_targ - self.frame_curr*0.001
+		self.score = self.lap_float/self.lap_targ - self.frame_curr*0.0002
 		if not self.on_course:
-			self.score -=0.1
+			self.score -=0.02
 
 		if self.score_max is None:
 			new_max = True
