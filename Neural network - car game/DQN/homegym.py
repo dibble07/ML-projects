@@ -30,7 +30,7 @@ class CarGameEnv:
 		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
 		self.bvel = -2
 		self.fvel = 5
-		self.rvel = 360/18
+		self.rvel = 360/16
 		self.sz = (16, 32)
 		# misc
 		self.viewer = None
@@ -88,7 +88,7 @@ class CarGameEnv:
 
 	def score_analyse(self):
 		self.score_prev = self.score
-		self.score = self.lap_float/self.lap_targ - self.frame_curr*0.0002
+		self.score = self.lap_float - self.frame_curr*0.001
 		if not self.on_course:
 			self.score -=0.02
 
@@ -121,6 +121,7 @@ class CarGameEnv:
 		self.hitbox_coords = self.outer_points()
 		# analyse position and store in memory
 		self.pos_analyse()
+
 		del self.loc_mem[self.loc_mem_sz-1]
 		self.loc_mem = [self.hitbox_center] + self.loc_mem
 

@@ -1,5 +1,6 @@
 # Import libraries
 from collections import deque
+from datetime import datetime
 from homegym import BlobEnv, CarGameEnv
 import imageio
 from keras.models import Sequential
@@ -134,13 +135,13 @@ class DQN_agent:
         return self.model.predict(np.asarray(state).reshape(-1, len(environment.observation_space)))[0]
 
 # Initialise variables and environment
-episode_final = 2500
+episode_final = 3_000
 episode_eval_freq = 25
 episode_eval_dur = 1
 episode_length = float('inf')
 eval_vis = True
 
-epsilon_init_ep = 800
+epsilon_init_ep = 0
 epsilon_init = 0.1
 epsilon_final = 0.01
 epsilon_decay = 0.001
@@ -154,7 +155,7 @@ update_target_freq = 5
 
 environment = CarGameEnv()
 # environment = BlobEnv(5)
-agent = DQN_agent(None)
+agent = DQN_agent('best_v2.model')
 
 # Loop for each episode
 evaluation_episodes = []
@@ -167,6 +168,7 @@ for episode in range(episode_final):
 
     # evaluate
     if not episode % episode_eval_freq or episode+1 == episode_final:
+        # complete episodes
         reward_eval_tot = 0
         render_eval_all = []
         for __ in range(episode_eval_dur):
@@ -174,11 +176,12 @@ for episode in range(episode_final):
             reward_eval_tot += episode_reward
             render_eval_all.extend(episode_render)
         reward_eval_avg = reward_eval_tot/episode_eval_dur
-        print(f"Episode {episode}: train = {len(agent.replay_memory) >= replay_memory_sz_min}, epsilon = {epsilon_fun(episode):.3f}, reward = {reward_eval_avg:.3f}")
+        # print stats and save model/video
+        print(f"{datetime.now():%H:%M:%S} Episode {episode}: train = {len(agent.replay_memory) >= replay_memory_sz_min}, epsilon = {epsilon_fun(episode):.3f}, reward = {reward_eval_avg:.3f}")
         save = False
         if len(evaluation_rewards) == 0:
             save = True
-        elif reward_eval_avg > min(evaluation_rewards):
+        elif reward_eval_avg > max(evaluation_rewards):
             save = True
         if save:
             agent.model.save("best.model")
@@ -186,6 +189,7 @@ for episode in range(episode_final):
                 with imageio.get_writer("best.mp4", fps=30) as video:
                     for render_eval in render_eval_all:
                         video.append_data(render_eval)
+        # save stats of current evaluation
         evaluation_rewards.append(reward_eval_avg)
         evaluation_episodes.append(episode)
 

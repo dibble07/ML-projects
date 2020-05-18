@@ -1,6 +1,7 @@
 learning:
 learn to do lap - maybe breakdown into learning skills
 Add all action options - initiate from previous best
+Add knowledge of track progress
 learn to do lap fast
 multiple frames to learn time derivatives
 
