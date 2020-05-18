@@ -36,17 +36,17 @@ class CarGameEnv:
 		self.viewer = None
 		self.win_sz = (608,608)
 		self.win_diag = (self.win_sz[0]**2+self.win_sz[1]**2)**0.5
-		temp=[]
-		for rot in [0, -1, 1]:
-			for trans in [1]:#, 0, -1
-				temp.append((trans, rot))
-		self.action_space = temp
-		self.observation_space = [np.sort(np.unique(np.concatenate((np.arange(0,0.4,0.05), np.arange(0.1,1,0.3)))))]*len(self.sense_ang)
 		self.patience = 10
 		self.lap_targ = 1
 		self.loc_mem_sz = 50
+		self.loc_mem_ind = [0, 1]
 		# reset
 		self.reset()
+		temp=[]
+		for trans in [1]:
+			for rot in [0, -1, 1]:
+				temp.append((trans, rot))
+		self.action_space = temp
 
 	def reset(self):
 		self.finished_episode = False
@@ -63,8 +63,10 @@ class CarGameEnv:
 		self.loc_mem = [self.hitbox_center]*self.loc_mem_sz
 		self.pos_analyse()
 		self.score_analyse()
+		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]]*self.loc_mem_sz
+		self.state = np.array([self.dist_mem[i] for i in self.loc_mem_ind]).reshape(-1)
 
-		return self.obs
+		return self.state
 
 	def step(self, action_ind):
 
@@ -83,14 +85,18 @@ class CarGameEnv:
 			self.score_analyse()
 			if self.finished_course or not self.on_course or (self.frame_curr - self.score_max_frame) >= self.patience:
 				self.finished_episode = True
+		# update sensing history
+		del self.dist_mem[-1]
+		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]] + self.dist_mem
+		self.state = np.array([self.dist_mem[i] for i in self.loc_mem_ind]).reshape(-1)
 
-		return self.obs, self.score-self.score_prev, self.finished_episode
+		return self.state, self.score-self.score_prev, self.finished_episode
 
 	def score_analyse(self):
 		self.score_prev = self.score
 		self.score = self.lap_float - self.frame_curr*0.001
 		if not self.on_course:
-			self.score -=0.02
+			self.score -=1
 
 		if self.score_max is None:
 			new_max = True
@@ -121,8 +127,7 @@ class CarGameEnv:
 		self.hitbox_coords = self.outer_points()
 		# analyse position and store in memory
 		self.pos_analyse()
-
-		del self.loc_mem[self.loc_mem_sz-1]
+		del self.loc_mem[-1]
 		self.loc_mem = [self.hitbox_center] + self.loc_mem
 
 	def outer_points(self):
@@ -189,7 +194,6 @@ class CarGameEnv:
 			else:
 				line_min.append([(x, y) for x,y in zip(*line_angle_min.xy)])
 		self.sense_dist = dist_min
-		self.obs = [dist/self.win_diag for dist in self.sense_dist]
 		self.sense_lin = line_min
 
 	def unique_wrap(self, list_in):

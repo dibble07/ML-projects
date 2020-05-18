@@ -1,16 +1,22 @@
 learning:
-learn to do lap - maybe breakdown into learning skills
-Add all action options - initiate from previous best
-Add knowledge of track progress
-learn to do lap fast
 multiple frames to learn time derivatives
 
-physics:
+environment features/physics:
 acceleration
 turning radius
 grip limits
+turning head/sensor array
+
+race car/driver differences:
+sensing array - no, distribution, movement
+car parameters - weight, grip, turning radius, acceleration, top speed
+exploration vs exploitation
+memory - amount and distribution
+architecture
+rewards weights - emphasis on speed vs completing laps vs staying on track
+
+
+tactical additions?
+remaining laps
 tyre degradation
 fuel use
-remaining laps
-race driver differences - sensing array, exploration, memory
-turning head/sesnsor array

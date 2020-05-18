@@ -89,6 +89,7 @@ class DQN_agent:
         else:
             from keras.models import load_model
             model = load_model(name)
+
         return model
 
     def update_replay_memory(self, transition):
@@ -132,16 +133,16 @@ class DQN_agent:
         return
 
     def get_qs(self, state):
-        return self.model.predict(np.asarray(state).reshape(-1, len(environment.observation_space)))[0]
+        return self.model.predict(state.reshape(-1,state.size))[0]
 
 # Initialise variables and environment
-episode_final = 3_000
+episode_final = 8000
 episode_eval_freq = 25
 episode_eval_dur = 1
 episode_length = float('inf')
 eval_vis = True
 
-epsilon_init_ep = 0
+epsilon_init_ep = 3000
 epsilon_init = 0.1
 epsilon_final = 0.01
 epsilon_decay = 0.001
@@ -155,7 +156,7 @@ update_target_freq = 5
 
 environment = CarGameEnv()
 # environment = BlobEnv(5)
-agent = DQN_agent('best_v2.model')
+agent = DQN_agent('NEW_best_v2.model')
 
 # Loop for each episode
 evaluation_episodes = []
@@ -181,12 +182,13 @@ for episode in range(episode_final):
         save = False
         if len(evaluation_rewards) == 0:
             save = True
-        elif reward_eval_avg > max(evaluation_rewards):
+        elif reward_eval_avg > max(evaluation_rewards) and len(agent.replay_memory) >= replay_memory_sz_min:
             save = True
         if save:
-            agent.model.save("best.model")
+            filename = f"Best_{datetime.now():%H-%M-%S}_{reward_eval_avg:.3f}"
+            agent.model.save(filename + ".model")
             if len(render_eval_all) > 0:
-                with imageio.get_writer("best.mp4", fps=30) as video:
+                with imageio.get_writer(filename + ".mp4", fps=30) as video:
                     for render_eval in render_eval_all:
                         video.append_data(render_eval)
         # save stats of current evaluation
