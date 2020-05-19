@@ -70,6 +70,32 @@ def episode_fun(env_in, epsilon_in, agent_in, update_Q, show_in):
 
     return agent_in, episode_reward, render_out
 
+def evaluate_fun(env_in, agent_in, show_in):
+    # complete episodes
+    reward_eval_tot = 0
+    render_eval_all = []
+    for __ in range(episode_eval_dur):
+        __, episode_reward, episode_render = episode_fun(env_in, 0, agent_in, False, show_in)
+        reward_eval_tot += episode_reward
+        render_eval_all.extend(episode_render)
+    reward_eval_avg = reward_eval_tot/episode_eval_dur
+    # save model/video
+    save_best = False
+    if train:
+        if len(evaluation_rewards) == 0:
+            save_best = True
+        elif reward_eval_avg > max(evaluation_rewards) and len(agent_in.replay_memory) >= replay_memory_sz_min:
+            save_best = True
+    prefix = "Best" if train else "Test"
+    filename = f"{prefix}_{datetime.now():%H-%M-%S}_{reward_eval_avg:.3f}"
+    if save_best:
+        agent.model.save(filename + ".model")
+    if (save_best or not train) and len(render_eval_all) > 0:
+            with imageio.get_writer(filename + ".mp4", fps=30) as video:
+                for render_eval in render_eval_all:
+                    video.append_data(render_eval)
+    return reward_eval_avg
+
 class DQN_agent:
 
     def __init__(self, name):
@@ -136,6 +162,8 @@ class DQN_agent:
         return self.model.predict(state.reshape(-1,state.size))[0]
 
 # Initialise variables and environment
+train = False
+
 episode_final = 8000
 episode_eval_freq = 25
 episode_eval_dur = 1
@@ -156,58 +184,43 @@ update_target_freq = 5
 
 environment = CarGameEnv()
 # environment = BlobEnv(5)
-agent = DQN_agent('NEW_best_v2.model')
+agent = DQN_agent('Best_00-02-16_0.715.model')
 
 # Loop for each episode
 evaluation_episodes = []
 evaluation_rewards = []
-for episode in range(episode_final):
 
-    # run episode
-    epsilon = epsilon_fun(episode)
-    agent, __, __ = episode_fun(environment, epsilon, agent, True, False)
+if train:
+    for episode in range(episode_final):
 
-    # evaluate
-    if not episode % episode_eval_freq or episode+1 == episode_final:
-        # complete episodes
-        reward_eval_tot = 0
-        render_eval_all = []
-        for __ in range(episode_eval_dur):
-            __, episode_reward, episode_render = episode_fun(environment, 0, agent, False, eval_vis)
-            reward_eval_tot += episode_reward
-            render_eval_all.extend(episode_render)
-        reward_eval_avg = reward_eval_tot/episode_eval_dur
-        # print stats and save model/video
-        print(f"{datetime.now():%H:%M:%S} Episode {episode}: train = {len(agent.replay_memory) >= replay_memory_sz_min}, epsilon = {epsilon_fun(episode):.3f}, reward = {reward_eval_avg:.3f}")
-        save = False
-        if len(evaluation_rewards) == 0:
-            save = True
-        elif reward_eval_avg > max(evaluation_rewards) and len(agent.replay_memory) >= replay_memory_sz_min:
-            save = True
-        if save:
-            filename = f"Best_{datetime.now():%H-%M-%S}_{reward_eval_avg:.3f}"
-            agent.model.save(filename + ".model")
-            if len(render_eval_all) > 0:
-                with imageio.get_writer(filename + ".mp4", fps=30) as video:
-                    for render_eval in render_eval_all:
-                        video.append_data(render_eval)
-        # save stats of current evaluation
-        evaluation_rewards.append(reward_eval_avg)
-        evaluation_episodes.append(episode)
+        # run episode
+        epsilon = epsilon_fun(episode)
+        agent, __, __ = episode_fun(environment, epsilon, agent, True, False)
 
-# Visualise results
-print("All episodes done")
-eps = list(range(episode_final))
-fig, ax1 = plt.subplots()
-ax1.set_xlabel("Episode")
-color = 'tab:red'
-ax1.plot(eps, epsilon_fun(eps), color=color)
-ax1.set_ylabel("Epsilon", color=color)
-ax1.tick_params(axis='y', labelcolor=color)
-ax2 = ax1.twinx()
-color = 'tab:blue'
-ax2.plot(evaluation_episodes, evaluation_rewards, color=color)
-ax2.set_ylabel(f"Reward", color=color)
-ax2.tick_params(axis='y', labelcolor=color)
-fig.tight_layout()
-plt.show()
+        # evaluate
+        if not episode % episode_eval_freq or episode+1 == episode_final:
+            # run evaluation
+            reward_eval_avg = evaluate_fun(environment, agent, eval_vis)
+            # print and save stats of current evaluation
+            print(f"{datetime.now():%H:%M:%S} Episode {episode}: train = {len(agent.replay_memory) >= replay_memory_sz_min}, epsilon = {epsilon_fun(episode):.3f}, reward = {reward_eval_avg:.3f}")
+            evaluation_rewards.append(reward_eval_avg)
+            evaluation_episodes.append(episode)
+
+    # Visualise results
+    print("All episodes done")
+    eps = list(range(episode_final))
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Episode")
+    color = 'tab:red'
+    ax1.plot(eps, epsilon_fun(eps), color=color)
+    ax1.set_ylabel("Epsilon", color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax2 = ax1.twinx()
+    color = 'tab:blue'
+    ax2.plot(evaluation_episodes, evaluation_rewards, color=color)
+    ax2.set_ylabel(f"Reward", color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    fig.tight_layout()
+    plt.show()
+else:
+    __ = evaluate_fun(environment, agent, True)

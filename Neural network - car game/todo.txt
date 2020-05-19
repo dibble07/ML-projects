@@ -1,6 +1,5 @@
 plot text of score in centre
 multiple laps - new course with long curves
-GIF in readme
 
 environment features/physics:
 acceleration
