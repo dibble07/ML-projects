@@ -1,0 +1,22 @@
+plot text of score in centre
+multiple laps - new course with long curves
+
+environment features/physics:
+acceleration
+turning radius
+grip limits
+turning head/sensor array
+
+race car/driver differences:
+sensing array - no, distribution, movement
+car parameters - weight, grip, turning radius, acceleration, top speed
+exploration vs exploitation
+memory - amount and distribution
+architecture
+rewards weights - emphasis on speed vs completing laps vs staying on track
+
+
+tactical additions?
+remaining laps
+tyre degradation
+fuel use
