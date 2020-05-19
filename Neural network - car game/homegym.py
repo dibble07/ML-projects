@@ -10,6 +10,7 @@ class CarGameEnv:
 	def __init__(self):
 		# initialise track
 		# track_coords = [(100, 200), (100, 500), (500, 500), (500, 100), (100, 100)]
+		# track_coords = [(100, 200), (100, 500), (300, 500), (300+141, 300+141), (300+200, 300), (300+141, 300-141), (300, 100), (100, 100)]
 		track_coords = [(100, 200), (100, 500), (500, 500), (500, 400), (400, 250), (500, 100), (100, 100)]
 		track_width = 40
 		self.middle_poly = Polygon(track_coords)
@@ -37,7 +38,7 @@ class CarGameEnv:
 		self.win_sz = (608,608)
 		self.win_diag = (self.win_sz[0]**2+self.win_sz[1]**2)**0.5
 		self.patience = 10
-		self.lap_targ = 1
+		self.lap_targ = 2
 		self.loc_mem_sz = 50
 		self.loc_mem_ind = list(range(5))
 		# reset
