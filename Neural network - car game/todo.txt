@@ -1,5 +1,6 @@
-learning:
-multiple frames to learn time derivatives
+plot text
+multiple laps - new course with long curves
+GIF in readme
 
 environment features/physics:
 acceleration

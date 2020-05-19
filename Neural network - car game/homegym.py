@@ -39,7 +39,7 @@ class CarGameEnv:
 		self.patience = 10
 		self.lap_targ = 1
 		self.loc_mem_sz = 50
-		self.loc_mem_ind = [0, 1]
+		self.loc_mem_ind = list(range(5))
 		# reset
 		self.reset()
 		temp=[]
