@@ -1,6 +1,6 @@
 plot text of score in centre
 remove unique_wrap function
-reintroduce memory
+visulaise memory locations
 
 environment features/physics:
 reversing

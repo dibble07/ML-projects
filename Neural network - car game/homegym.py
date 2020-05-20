@@ -60,7 +60,7 @@ class CarGameEnv:
 		self.patience = 10
 		self.lap_targ = 2
 		self.loc_mem_sz = 50
-		self.loc_mem_ind = list(range(1))
+		self.dist_mem_ind = list(range(0,10,2))
 		# reset
 		self.reset()
 		self.action_space = ["accelerate" , "decelerate", "maintain", "left", "right"]
@@ -82,7 +82,7 @@ class CarGameEnv:
 		self.pos_analyse()
 		self.score_analyse()
 		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]]*self.loc_mem_sz
-		self.state = np.append(np.array([self.dist_mem[i] for i in self.loc_mem_ind]).reshape(-1),[self.vel/self.vel_max])
+		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
 		return self.state
 
@@ -113,7 +113,7 @@ class CarGameEnv:
 		# update sensing history
 		del self.dist_mem[-1]
 		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]] + self.dist_mem
-		self.state = np.append(np.array([self.dist_mem[i] for i in self.loc_mem_ind]).reshape(-1),[self.vel/self.vel_max])
+		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
 		return self.state, self.score-self.score_prev, self.finished_episode
 
@@ -416,7 +416,7 @@ class BlobEnv:
 		return img
  
 
-# env = CarGameEnv()
+env = CarGameEnv()
 # action = 0
 # while not env.finished_episode:
 # 	env.step(action)

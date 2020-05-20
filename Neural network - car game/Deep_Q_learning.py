@@ -164,13 +164,12 @@ class DQN_agent:
 # Initialise variables and environment
 train = True
 
-episode_final = 1000
+episode_final = 2000
 episode_eval_freq = 25
 episode_eval_dur = 1
-episode_length = float('inf')
 eval_vis = True
 
-epsilon_init_ep = 0
+epsilon_init_ep = 500
 epsilon_init = 0.1
 epsilon_final = 0.02
 epsilon_decay = 0.002
@@ -184,7 +183,7 @@ update_target_freq = 5
 
 environment = CarGameEnv()
 # environment = BlobEnv(5)
-agent = DQN_agent("Best_01-52-25_0.716.model")
+agent = DQN_agent("Best_12-22-11_1.569.model")
 
 # Loop for each episode
 evaluation_episodes = []
