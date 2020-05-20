@@ -1,10 +1,10 @@
 plot text of score in centre
-multiple laps - new course with long curves
+remove unique_wrap function
+reintroduce memory
 
 environment features/physics:
-acceleration
-turning radius
-grip limits
+reversing
+visulise speed/action
 turning head/sensor array
 
 race car/driver differences:

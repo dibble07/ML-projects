@@ -81,10 +81,10 @@ def evaluate_fun(env_in, agent_in, show_in):
     reward_eval_avg = reward_eval_tot/episode_eval_dur
     # save model/video
     save_best = False
-    if train:
+    if train and len(agent.replay_memory) >= replay_memory_sz_min:
         if len(evaluation_rewards) == 0:
             save_best = True
-        elif reward_eval_avg > max(evaluation_rewards) and len(agent_in.replay_memory) >= replay_memory_sz_min:
+        elif reward_eval_avg > max(evaluation_rewards):
             save_best = True
     prefix = "Best" if train else "Test"
     filename = f"{prefix}_{datetime.now():%H-%M-%S}_{reward_eval_avg:.3f}"
@@ -108,8 +108,8 @@ class DQN_agent:
     def create_model(self, name):
         if name is None:
             model = Sequential()
-            model.add(Dense(64, input_shape=(len(environment.observation_space),)))
-            model.add(Dense(16, activation='relu'))
+            model.add(Dense(64, input_shape=(environment.state.size,)))
+            model.add(Dense(32, activation='relu'))
             model.add(Dense(len(environment.action_space), activation='linear'))
             model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])
         else:
@@ -162,18 +162,18 @@ class DQN_agent:
         return self.model.predict(state.reshape(-1,state.size))[0]
 
 # Initialise variables and environment
-train = False
+train = True
 
-episode_final = 8000
+episode_final = 1000
 episode_eval_freq = 25
 episode_eval_dur = 1
 episode_length = float('inf')
 eval_vis = True
 
-epsilon_init_ep = 3000
+epsilon_init_ep = 0
 epsilon_init = 0.1
-epsilon_final = 0.01
-epsilon_decay = 0.001
+epsilon_final = 0.02
+epsilon_decay = 0.002
 
 discount = 0.95
 
@@ -184,7 +184,7 @@ update_target_freq = 5
 
 environment = CarGameEnv()
 # environment = BlobEnv(5)
-agent = DQN_agent('Best_00-02-16_0.715.model')
+agent = DQN_agent("Best_01-52-25_0.716.model")
 
 # Loop for each episode
 evaluation_episodes = []
