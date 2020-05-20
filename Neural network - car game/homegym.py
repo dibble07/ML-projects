@@ -120,7 +120,7 @@ class CarGameEnv:
 	def score_analyse(self):
 		# calculate score
 		self.score_prev = self.score
-		self.score = self.lap_float - self.frame_curr*0.001
+		self.score = self.lap_float
 		if not self.on_course:
 			self.score -=1
 		# update maximum position

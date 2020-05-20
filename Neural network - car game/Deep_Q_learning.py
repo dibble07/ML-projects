@@ -68,14 +68,16 @@ def episode_fun(env_in, epsilon_in, agent_in, update_Q, show_in):
         if show_in:
             render_out.append(env_in.render())
 
-    return agent_in, episode_reward, render_out
+    episode_frame_count = env_in.frame_curr
+
+    return agent_in, episode_reward, episode_frame_count, render_out
 
 def evaluate_fun(env_in, agent_in, show_in):
     # complete episodes
     reward_eval_tot = 0
     render_eval_all = []
     for __ in range(episode_eval_dur):
-        __, episode_reward, episode_render = episode_fun(env_in, 0, agent_in, False, show_in)
+        __, episode_reward, episode_frame_count, episode_render = episode_fun(env_in, 0, agent_in, False, show_in)
         reward_eval_tot += episode_reward
         render_eval_all.extend(episode_render)
     reward_eval_avg = reward_eval_tot/episode_eval_dur
@@ -87,14 +89,14 @@ def evaluate_fun(env_in, agent_in, show_in):
         elif reward_eval_avg > max(evaluation_rewards):
             save_best = True
     prefix = "Best" if train else "Test"
-    filename = f"{prefix}_{datetime.now():%H-%M-%S}_{reward_eval_avg:.3f}"
+    filename = f"{prefix}_{datetime.now():%H-%M-%S}_{reward_eval_avg:.3f}_{episode_frame_count:3d}"
     if save_best:
         agent.model.save(filename + ".model")
     if (save_best or not train) and len(render_eval_all) > 0:
             with imageio.get_writer(filename + ".mp4", fps=30) as video:
                 for render_eval in render_eval_all:
                     video.append_data(render_eval)
-    return reward_eval_avg
+    return reward_eval_avg, episode_frame_count
 
 class DQN_agent:
 
@@ -164,14 +166,14 @@ class DQN_agent:
 # Initialise variables and environment
 train = True
 
-episode_final = 2000
+episode_final = 1500
 episode_eval_freq = 25
 episode_eval_dur = 1
 eval_vis = True
 
-epsilon_init_ep = 500
-epsilon_init = 0.1
-epsilon_final = 0.02
+epsilon_init_ep = 300
+epsilon_init = 0.05
+epsilon_final = 0.01
 epsilon_decay = 0.002
 
 discount = 0.95
@@ -183,7 +185,7 @@ update_target_freq = 5
 
 environment = CarGameEnv()
 # environment = BlobEnv(5)
-agent = DQN_agent("Best_12-22-11_1.569.model")
+agent = DQN_agent("Best_18-43-23_2.002_358.model")
 
 # Loop for each episode
 evaluation_episodes = []
@@ -194,14 +196,14 @@ if train:
 
         # run episode
         epsilon = epsilon_fun(episode)
-        agent, __, __ = episode_fun(environment, epsilon, agent, True, False)
+        agent, __, __, __ = episode_fun(environment, epsilon, agent, True, False)
 
         # evaluate
         if not episode % episode_eval_freq or episode+1 == episode_final:
             # run evaluation
-            reward_eval_avg = evaluate_fun(environment, agent, eval_vis)
+            reward_eval_avg, episode_frame_count = evaluate_fun(environment, agent, eval_vis)
             # print and save stats of current evaluation
-            print(f"{datetime.now():%H:%M:%S} Episode {episode}: train = {len(agent.replay_memory) >= replay_memory_sz_min}, epsilon = {epsilon_fun(episode):.3f}, reward = {reward_eval_avg:.3f}")
+            print(f"{datetime.now():%H:%M:%S} Ep {episode}: train={len(agent.replay_memory) >= replay_memory_sz_min}, epsilon={epsilon_fun(episode):.3f}, reward={reward_eval_avg:.2f}, frames={episode_frame_count:.3f}")
             evaluation_rewards.append(reward_eval_avg)
             evaluation_episodes.append(episode)
 
