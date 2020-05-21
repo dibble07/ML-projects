@@ -1,9 +1,10 @@
 plot text of score in centre
-remove unique_wrap function
 visualise memory locations
+add repeated episilon spikes
+actor - critic for continuous action space
+car collisions?
 
 environment features/physics:
-reversing
 turning head/sensor array
 
 race car/driver differences:

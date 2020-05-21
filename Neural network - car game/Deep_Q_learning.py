@@ -19,9 +19,6 @@ random.seed(42)
 import tensorflow as tf
 tf.random.set_seed(42)
 
-# print("""
-#     To do:
-# """)
 
 # Define user functions/classes
 def epsilon_fun(eps_in):
@@ -43,8 +40,6 @@ def episode_fun(env_in, epsilon_in, agent_in, update_Q, show_in):
     # reset episode
     current_state = env_in.reset()
     render_out = []
-    episode_reward = 0
-    step_count = 0
     done = False
     while not done:
 
@@ -61,42 +56,45 @@ def episode_fun(env_in, epsilon_in, agent_in, update_Q, show_in):
             agent_in.train(done)
 
         # prepare for next step
-        episode_reward += reward
         current_state = new_state
 
         # render if desired
         if show_in:
             render_out.append(env_in.render())
 
-    episode_frame_count = env_in.frame_curr
-
-    return agent_in, episode_reward, episode_frame_count, render_out
+    return agent_in, env_in.lap_float, env_in.frame_curr, render_out
 
 def evaluate_fun(env_in, agent_in, show_in):
+    global incumbent_lap_float, incumbent_frame_count
     # complete episodes
-    reward_eval_tot = 0
+    lap_float_tot = 0
+    frame_count_tot = 0
     render_eval_all = []
     for __ in range(episode_eval_dur):
-        __, episode_reward, episode_frame_count, episode_render = episode_fun(env_in, 0, agent_in, False, show_in)
-        reward_eval_tot += episode_reward
+        __, episode_lap_float, episode_frame_count, episode_render = episode_fun(env_in, 0, agent_in, False, show_in)
+        lap_float_tot += episode_lap_float
+        frame_count_tot += episode_frame_count
         render_eval_all.extend(episode_render)
-    reward_eval_avg = reward_eval_tot/episode_eval_dur
+    lap_float_avg = lap_float_tot/episode_eval_dur
+    frame_count_avg = frame_count_tot/episode_eval_dur
     # save model/video
     save_best = False
-    if train and len(agent.replay_memory) >= replay_memory_sz_min:
-        if len(evaluation_rewards) == 0:
+    if train:
+        if incumbent_lap_float == None or incumbent_frame_count == None:
             save_best = True
-        elif reward_eval_avg > max(evaluation_rewards):
+        elif lap_float_avg > incumbent_lap_float or (lap_float_avg == incumbent_lap_float and frame_count_avg < incumbent_frame_count):
             save_best = True
     prefix = "Best" if train else "Test"
-    filename = f"{prefix}_{datetime.now():%H-%M-%S}_{reward_eval_avg:.3f}_{episode_frame_count:3d}"
+    filename = f"{prefix}_{datetime.now():%H-%M-%S}_{lap_float_avg:.2f}_{episode_frame_count:3.1f}"
     if save_best:
+        print("Saving " + filename)
+        incumbent_lap_float, incumbent_frame_count = lap_float_avg, frame_count_avg
         agent.model.save(filename + ".model")
     if (save_best or not train) and len(render_eval_all) > 0:
             with imageio.get_writer(filename + ".mp4", fps=30) as video:
                 for render_eval in render_eval_all:
                     video.append_data(render_eval)
-    return reward_eval_avg, episode_frame_count
+    return lap_float_avg, frame_count_avg
 
 class DQN_agent:
 
@@ -166,15 +164,15 @@ class DQN_agent:
 # Initialise variables and environment
 train = True
 
-episode_final = 1500
+episode_final = 3_000
 episode_eval_freq = 25
 episode_eval_dur = 1
 eval_vis = True
 
-epsilon_init_ep = 300
-epsilon_init = 0.05
+epsilon_init_ep = 3_000
+epsilon_init = 0.1
 epsilon_final = 0.01
-epsilon_decay = 0.002
+epsilon_decay = 0.001
 
 discount = 0.95
 
@@ -189,7 +187,10 @@ agent = DQN_agent("Best_18-43-23_2.002_358.model")
 
 # Loop for each episode
 evaluation_episodes = []
-evaluation_rewards = []
+evaluation_lap_float = []
+evaluation_frame_count = []
+incumbent_lap_float = None
+incumbent_frame_count = None
 
 if train:
     for episode in range(episode_final):
@@ -201,10 +202,11 @@ if train:
         # evaluate
         if not episode % episode_eval_freq or episode+1 == episode_final:
             # run evaluation
-            reward_eval_avg, episode_frame_count = evaluate_fun(environment, agent, eval_vis)
+            lap_float_avg, frame_count_avg = evaluate_fun(environment, agent, eval_vis)
             # print and save stats of current evaluation
-            print(f"{datetime.now():%H:%M:%S} Ep {episode}: train={len(agent.replay_memory) >= replay_memory_sz_min}, epsilon={epsilon_fun(episode):.3f}, reward={reward_eval_avg:.2f}, frames={episode_frame_count:.3f}")
-            evaluation_rewards.append(reward_eval_avg)
+            print(f"{datetime.now():%H:%M:%S} Ep {episode}: train={len(agent.replay_memory) >= replay_memory_sz_min}, epsilon={epsilon_fun(episode):.3f}, reward={lap_float_avg:.2f}, frames={frame_count_avg:3.1f}")
+            evaluation_lap_float.append(lap_float_avg)
+            evaluation_frame_count.append(frame_count_avg)
             evaluation_episodes.append(episode)
 
     # Visualise results
@@ -218,7 +220,8 @@ if train:
     ax1.tick_params(axis='y', labelcolor=color)
     ax2 = ax1.twinx()
     color = 'tab:blue'
-    ax2.plot(evaluation_episodes, evaluation_rewards, color=color)
+    ax2.plot(evaluation_episodes, evaluation_lap_float, color=color)
+    ax2.plot(evaluation_episodes, evaluation_frame_count, color=color)
     ax2.set_ylabel(f"Reward", color=color)
     ax2.tick_params(axis='y', labelcolor=color)
     fig.tight_layout()

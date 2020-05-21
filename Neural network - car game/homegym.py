@@ -20,6 +20,11 @@ def rotate_points(point_in, angle, centre):
 
 	return point_out
 
+def wrap_points(list_in):
+	out=list_in
+	out.append(out[0])
+	return out
+
 class CarGameEnv:
 
 	def __init__(self):
@@ -30,15 +35,15 @@ class CarGameEnv:
 		track_width = 40
 		self.middle_poly = Polygon(track_coords)
 		self.middle_lin = LinearRing(self.middle_poly.exterior.coords)
-		temp_coords = self.unique_wrap([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
+		temp_coords = wrap_points([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
 		self.middle_coords = temp_coords[::-1]
 		temp_poly = Polygon(self.middle_poly.buffer(track_width*-1).exterior, [self.middle_lin])
-		temp_coords = self.unique_wrap([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
+		temp_coords = wrap_points([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
 		self.inner_coords = temp_coords[::-1]
 		self.inner_poly = Polygon(self.inner_coords)
 		self.inner_lin = LinearRing(self.inner_poly.exterior.coords)
 		temp_poly = Polygon(self.middle_poly.buffer(track_width).exterior, [self.middle_lin])
-		temp_coords = self.unique_wrap([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
+		temp_coords = wrap_points([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
 		self.outer_coords = temp_coords[::-1]
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
@@ -83,7 +88,6 @@ class CarGameEnv:
 		self.score_analyse()
 		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]]*self.loc_mem_sz
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
-
 		return self.state
 
 	def step(self, action_ind):
@@ -182,7 +186,7 @@ class CarGameEnv:
 				self.lap_whole +=1
 			elif track_prog_change > 0.8:
 				self.lap_whole -=1
-		self.lap_float = self.lap_whole + self.track_prog
+		self.lap_float = min(self.lap_targ, self.lap_whole + self.track_prog)
 		# location on track
 		car_loc_track = self.middle_lin.interpolate(self.track_prog, normalized = True)
 		temp = list(car_loc_track.coords)[0]
@@ -215,14 +219,6 @@ class CarGameEnv:
 				line_min.append([(x, y) for x,y in zip(*line_angle_min.xy)])
 		self.sense_dist = dist_min
 		self.sense_lin = line_min
-
-	def unique_wrap(self, list_in):
-		out=[]
-		for i in list_in:
-			if i not in out:
-				out.append(i)
-		out.append(out[0])
-		return out
 
 	def render(self):
 		if self.viewer is None:
