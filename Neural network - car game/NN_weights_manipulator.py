@@ -5,14 +5,14 @@ from keras.optimizers import Adam
 from homegym import BlobEnv, CarGameEnv
 import numpy as np
 
-load_name = "best_v2.model"
+load_name = "Best_07-17-40_1.956.model"
 environment = CarGameEnv()
 replace_style = 2
 
 # create blank model
 model_new = Sequential()
 model_new.add(Dense(64, input_shape=(environment.state.size,)))
-model_new.add(Dense(16, activation='relu'))
+model_new.add(Dense(32, activation='relu'))
 model_new.add(Dense(len(environment.action_space), activation='linear'))
 model_new.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])
 # load existing model
@@ -33,14 +33,13 @@ if replace_style == 1:
         new_weights.append(updated_layer)
         new_weights.append(updated_bias)
 elif replace_style == 2:
-    dup = model_new_weights[0].shape[0]//model_load_weights[0].shape[0]
-    print(dup)
     new_weights = model_load_weights
-    new_weights[0] = np.tile(model_load_weights[0],(dup,1))/dup
-    dup = model_new_weights[-2].shape[0]//model_load_weights[-2].shape[0]
-    print(dup)
-    new_weights = model_load_weights
-    new_weights[-2] = np.tile(model_load_weights[-2],(dup,1))/dup
+    for ind, dup in zip([0], [5]):
+        temp_weights_dist, temp_weights_misc = np.array_split(new_weights[ind],[len(environment.sense_dist)], axis=0)
+        print(new_weights[ind].shape, temp_weights_dist.shape, temp_weights_misc.shape)
+        temp_weights_dist = np.tile(temp_weights_dist,(dup,1))/dup
+        print(temp_weights_dist.shape)
+        new_weights[ind] = np.concatenate((temp_weights_dist, temp_weights_misc), axis=0)
 
 # apply new weights
 print([i.shape for i in new_weights])

@@ -5,6 +5,26 @@ from PIL import Image
 import cv2
 from shapely.geometry import Polygon, Point, LinearRing, LineString
 
+def rotate_points(point_in, angle, centre):
+	ox, oy = centre
+	point_out = []
+	for point in point_in:
+		px, py = point
+		cs = cos(angle)
+		sn = sin(angle)
+		xd = px - ox
+		yd = py - oy
+		qx = ox + cs * xd - sn * yd
+		qy = oy + sn * xd + cs * yd
+		point_out.append((qx, qy))
+
+	return point_out
+
+def wrap_points(list_in):
+	out=list_in
+	out.append(out[0])
+	return out
+
 class CarGameEnv:
 
 	def __init__(self):
@@ -15,23 +35,28 @@ class CarGameEnv:
 		track_width = 40
 		self.middle_poly = Polygon(track_coords)
 		self.middle_lin = LinearRing(self.middle_poly.exterior.coords)
-		temp_coords = self.unique_wrap([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
+		temp_coords = wrap_points([(x, y) for x,y in zip(*self.middle_poly.exterior.xy)])
 		self.middle_coords = temp_coords[::-1]
 		temp_poly = Polygon(self.middle_poly.buffer(track_width*-1).exterior, [self.middle_lin])
-		temp_coords = self.unique_wrap([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
+		temp_coords = wrap_points([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
 		self.inner_coords = temp_coords[::-1]
 		self.inner_poly = Polygon(self.inner_coords)
 		self.inner_lin = LinearRing(self.inner_poly.exterior.coords)
 		temp_poly = Polygon(self.middle_poly.buffer(track_width).exterior, [self.middle_lin])
-		temp_coords = self.unique_wrap([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
+		temp_coords = wrap_points([(x, y) for x,y in zip(*temp_poly.exterior.xy)])
 		self.outer_coords = temp_coords[::-1]
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 		# initialise car
 		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
-		self.bvel = -2
-		self.fvel = 5
-		self.rvel = 360/16
+		self.mass = 750
+		self.aero_drag_v2 = 0.5*1.225*1.3
+		self.aero_down_v2 = self.aero_drag_v2*2.5
+		self.forward_force = 8000
+		self.vel_max = (self.forward_force/self.aero_drag_v2)**0.5
+		self.r_turn_min = 30
+		self.friction_coeff = 1.6
+		self.time_per_frame = 0.2
 		self.sz = (16, 32)
 		# misc
 		self.viewer = None
@@ -40,91 +65,100 @@ class CarGameEnv:
 		self.patience = 10
 		self.lap_targ = 2
 		self.loc_mem_sz = 50
-		self.loc_mem_ind = list(range(5))
+		self.dist_mem_ind = list(range(0,10,2))
 		# reset
 		self.reset()
-		temp=[]
-		for trans in [1]:
-			for rot in [0, -1, 1]:
-				temp.append((trans, rot))
-		self.action_space = temp
+		self.action_space = ["accelerate" , "decelerate", "maintain", "left", "right"]
 
 	def reset(self):
 		self.finished_episode = False
 		self.frame_curr = 0
 		self.bear = 0
+		self.vel = 0
 		self.lap_whole = 0
 		self.lap_float = None
+		self.lap_float_max = self.lap_float
+		self.lap_float_frame_max = self.frame_curr
 		self.track_prog_prev = None
 		self.score = None
-		self.score_max = self.score
-		self.score_max_frame = self.frame_curr
 		self.hitbox_center = self.middle_coords[0]
 		self.hitbox_coords = self.outer_points()
 		self.loc_mem = [self.hitbox_center]*self.loc_mem_sz
 		self.pos_analyse()
 		self.score_analyse()
 		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]]*self.loc_mem_sz
-		self.state = np.array([self.dist_mem[i] for i in self.loc_mem_ind]).reshape(-1)
-
+		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 		return self.state
 
 	def step(self, action_ind):
-
+		# reset if finished
 		if self.finished_episode:
 			return self.reset()
-
+		# calculate movements
 		action = self.action_space[action_ind]
-		if action is None:
+		dist = self.vel*self.time_per_frame
+		drag = self.aero_drag_v2*self.vel**2
+		grip = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
+		rotation = None
+		if action == "accelerate":
+			self.vel = max(0,self.vel+(self.forward_force - drag)/self.mass*self.time_per_frame)
+		elif action == "decelerate":
+			self.vel = max(0,self.vel+(-grip - drag)/self.mass*self.time_per_frame)
+		elif action in ["left","right"]:
+			rot_sign = 1 if action == "right" else -1
+			rot_radius = max(self.r_turn_min, self.mass*self.vel**2/grip)
+			rotation = (rot_sign, rot_radius)
+		# implement movements and update scores and statuses
+		self.move(dist, rotation)
+		self.frame_curr +=1
+		self.score_analyse()
+		if self.finished_course or not self.on_course or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
 			self.finished_episode = True
-		else:
-			for_unit, bear_unit = action
-			for_unit, bear_unit = self.action_space[action_ind]
-			if bear_unit != 0 or for_unit != 0:
-				self.move(bear_unit, for_unit)
-			self.frame_curr +=1
-			self.score_analyse()
-			if self.finished_course or not self.on_course or (self.frame_curr - self.score_max_frame) >= self.patience:
-				self.finished_episode = True
 		# update sensing history
 		del self.dist_mem[-1]
 		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]] + self.dist_mem
-		self.state = np.array([self.dist_mem[i] for i in self.loc_mem_ind]).reshape(-1)
+		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
 		return self.state, self.score-self.score_prev, self.finished_episode
 
 	def score_analyse(self):
+		# calculate score
 		self.score_prev = self.score
-		self.score = self.lap_float - self.frame_curr*0.001
+		self.score = self.lap_float
 		if not self.on_course:
 			self.score -=1
-
-		if self.score_max is None:
+		# update maximum position
+		if self.lap_float_max is None:
 			new_max = True
 		else:
-			if self.score > self.score_max:
+			if self.lap_float > self.lap_float_max:
 				new_max = True
 			else:
 				new_max = False
 		if new_max:
-			self.score_max = self.score
-			self.score_max_frame = self.frame_curr
+			self.lap_float_max = self.lap_float
+			self.lap_float_frame_max = self.frame_curr
 
-	def move(self, bear_unit, for_unit):
+	def move(self, dist, rotation):
 		# save old track progress
 		self.track_prog_prev = self.track_prog
 		# move car
-		self.bear+=bear_unit*self.rvel
-		angle_rad = self.bear/180*pi
-		if for_unit > 0:
-			vel = self.fvel
-		elif for_unit < 0:
-			vel = self.bvel
-		elif for_unit == 0:
-			vel = 0
-		x_delt = vel*sin(angle_rad)
-		y_delt = vel*cos(angle_rad)
-		self.hitbox_center = (self.hitbox_center[0]+x_delt, self.hitbox_center[1]+y_delt)
+		if rotation is None:
+			angle_rad = self.bear/180*pi
+			x_delt = dist*sin(angle_rad)
+			y_delt = dist*cos(angle_rad)
+			self.hitbox_center = (self.hitbox_center[0]+x_delt, self.hitbox_center[1]+y_delt)
+		else:
+			# calculate center of rotation and angle or rotation
+			rot_sign, rot_radius = rotation
+			angle_rad = (self.bear+90*rot_sign)/180*pi
+			x_delt = rot_radius*sin(angle_rad)
+			y_delt = rot_radius*cos(angle_rad)
+			rot_center = (self.hitbox_center[0]+x_delt, self.hitbox_center[1]+y_delt)
+			rot_ang_rad = dist/rot_radius*rot_sign
+			# rotate car centre point and directional vector
+			self.hitbox_center = rotate_points([self.hitbox_center], -rot_ang_rad, rot_center)[0]
+			self.bear+=rot_ang_rad/pi*180
 		self.hitbox_coords = self.outer_points()
 		# analyse position and store in memory
 		self.pos_analyse()
@@ -136,18 +170,7 @@ class CarGameEnv:
 		xd, yd = self.sz[0]/2, self.sz[1]/2
 		point_nonrot = [(self.hitbox_center[0]+x, self.hitbox_center[1]+y) for (x,y) in [(-xd,-yd), (xd,-yd), (xd,yd), (-xd,yd)]]
 		# rotate outer points
-		angle_rad = self.bear/180*pi
-		ox, oy = self.hitbox_center
-		point_out = []
-		for point in point_nonrot:
-			px, py = point
-			cs = cos(angle_rad)
-			sn = sin(angle_rad)
-			xd = px - ox
-			yd = py - oy
-			qx = ox + cs * xd - sn * yd
-			qy = oy + sn * xd + cs * yd
-			point_out.append((qx, qy))
+		point_out = rotate_points(point_nonrot, -self.bear/180*pi, self.hitbox_center)
 		return point_out
 
 	def pos_analyse(self):
@@ -163,7 +186,7 @@ class CarGameEnv:
 				self.lap_whole +=1
 			elif track_prog_change > 0.8:
 				self.lap_whole -=1
-		self.lap_float = self.lap_whole + self.track_prog
+		self.lap_float = min(self.lap_targ, self.lap_whole + self.track_prog)
 		# location on track
 		car_loc_track = self.middle_lin.interpolate(self.track_prog, normalized = True)
 		temp = list(car_loc_track.coords)[0]
@@ -196,14 +219,6 @@ class CarGameEnv:
 				line_min.append([(x, y) for x,y in zip(*line_angle_min.xy)])
 		self.sense_dist = dist_min
 		self.sense_lin = line_min
-
-	def unique_wrap(self, list_in):
-		out=[]
-		for i in list_in:
-			if i not in out:
-				out.append(i)
-		out.append(out[0])
-		return out
 
 	def render(self):
 		if self.viewer is None:
@@ -396,3 +411,17 @@ class BlobEnv:
 		img = Image.fromarray(env, 'RGB')  # reading to rgb. Apparently. Even tho color definitions are bgr. ???
 		return img
  
+
+env = CarGameEnv()
+# action = 0
+# while not env.finished_episode:
+# 	env.step(action)
+# 	if env.frame_curr == 6:
+# 		action = 2
+# 	if env.frame_curr == 12:
+# 		action = 3
+# 	if env.frame_curr == 18:
+# 		action = 0
+# 	if env.frame_curr == 24:
+# 		action = 3
+	# env.render()
