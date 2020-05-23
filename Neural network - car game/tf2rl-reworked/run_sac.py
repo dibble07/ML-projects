@@ -11,13 +11,15 @@ if __name__ == '__main__':
     # parser.add_argument('--env-name', type=str, default="Pendulum-v0")
     parser.set_defaults(batch_size=100)
     parser.set_defaults(n_warmup=10000)
-    parser.set_defaults(max_steps=3e6)
+    parser.set_defaults(max_steps=1e6)
     args = parser.parse_args()
 
     # env = gym.make(args.env_name)
     # test_env = gym.make(args.env_name)
     env = LunarLanderContinuous()
     test_env = LunarLanderContinuous()
+    env = CarGameEnv(True)
+    test_env = CarGameEnv(True)
     policy = SAC(
         state_shape=env.observation_space.shape,
         action_dim=env.action_space.high.size,

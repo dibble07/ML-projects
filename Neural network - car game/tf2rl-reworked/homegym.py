@@ -29,7 +29,7 @@ def wrap_points(list_in):
 
 class CarGameEnv:
 
-	def __init__(self):
+	def __init__(self, continuous_flag):
 		# initialise track
 		# track_coords = [(100, 200), (100, 500), (500, 500), (500, 100), (100, 100)]
 		# track_coords = [(100, 200), (100, 500), (300, 500), (300+141, 300+141), (300+200, 300), (300+141, 300-141), (300, 100), (100, 100)]
@@ -70,10 +70,15 @@ class CarGameEnv:
 		self.dist_mem_ind = [0]#list(range(0,10,2))
 		# reset
 		self.reset()
-		self.actions_avail = ["accelerate" , "decelerate", "maintain", "left", "right"]
-		self.action_space = spaces.Discrete(len(self.actions_avail))
-		high = np.ones(len(self.dist_mem_ind)*len(self.sense_ang)+1, dtype=np.float32)
-		self.observation_space = spaces.Box(-high, high, dtype=np.float32)
+		# spaces
+		high = np.ones(len(self.state))
+		self.observation_space = spaces.Box(-high, high)
+		self.continuous = continuous_flag
+		if self.continuous:
+			self.action_space = spaces.Box(-1, +1, (2,))
+		else:
+			self.actions_avail = ["accelerate" , "decelerate", "maintain", "left", "right"]
+			self.action_space = spaces.Discrete(len(self.actions_avail))
 
 	def reset(self):
 		self.finished_episode = False
@@ -95,24 +100,34 @@ class CarGameEnv:
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 		return self.state
 
-	def step(self, action_ind):
+	def step(self, action_in):
 		# reset if finished
 		if self.finished_episode:
 			return self.reset()
 		# calculate movements
-		action = self.actions_avail[action_ind]
 		dist = self.vel*self.time_per_frame
 		drag = self.aero_drag_v2*self.vel**2
 		grip = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
+		r_turn_max = self.mass*self.vel**2/grip
 		rotation = None
-		if action == "accelerate":
-			self.vel = max(0,self.vel+(self.forward_force - drag)/self.mass*self.time_per_frame)
-		elif action == "decelerate":
-			self.vel = max(0,self.vel+(-grip - drag)/self.mass*self.time_per_frame)
-		elif action in ["left","right"]:
-			rot_sign = 1 if action == "right" else -1
-			rot_radius = max(self.r_turn_min, self.mass*self.vel**2/grip)
+		if self.continuous:
+			act_for_aft, act_steer = action_in
+			for_aft_force_max = self.forward_force if act_for_aft >= 0 else -grip
+			for_aft_force = abs(act_for_aft)*for_aft_force_max
+			self.vel = max(0,self.vel+(for_aft_force - drag)/self.mass*self.time_per_frame)
+			rot_sign = np.sign(act_steer)
+			rot_radius = self.r_turn_min + abs(act_steer)*(r_turn_max-self.r_turn_min)
 			rotation = (rot_sign, rot_radius)
+		else:
+			action = self.actions_avail[action_in]
+			if action == "accelerate":
+				self.vel = max(0,self.vel+(self.forward_force - drag)/self.mass*self.time_per_frame)
+			elif action == "decelerate":
+				self.vel = max(0,self.vel+(-grip - drag)/self.mass*self.time_per_frame)
+			elif action in ["left","right"]:
+				rot_sign = 1 if action == "right" else -1
+				rot_radius = max(self.r_turn_min, r_turn_max)
+				rotation = (rot_sign, rot_radius)
 		# implement movements and update scores and statuses
 		self.move(dist, rotation)
 		self.frame_curr +=1
@@ -626,7 +641,6 @@ class LunarLander(gym.Env, EzPickle):
         else:
             # Nop, fire left engine, main engine, right engine
             self.action_space = spaces.Discrete(4)
-
         self.reset()
 
     def seed(self, seed=None):
