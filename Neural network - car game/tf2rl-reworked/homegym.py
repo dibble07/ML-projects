@@ -1,5 +1,5 @@
 from gym import spaces
-from math import cos, sin, pi
+from math import cos, sin, pi, tan, atan
 import numpy as np
 import random
 from PIL import Image
@@ -108,16 +108,20 @@ class CarGameEnv:
 		dist = self.vel*self.time_per_frame
 		drag = self.aero_drag_v2*self.vel**2
 		grip = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
-		r_turn_max = self.mass*self.vel**2/grip
+		r_turn_grip = self.mass*self.vel**2/grip
 		rotation = None
 		if self.continuous:
+			w = 3.7
 			act_for_aft, act_steer = action_in
 			for_aft_force_max = self.forward_force if act_for_aft >= 0 else -grip
 			for_aft_force = abs(act_for_aft)*for_aft_force_max
 			self.vel = max(0,self.vel+(for_aft_force - drag)/self.mass*self.time_per_frame)
-			rot_sign = np.sign(act_steer)
-			rot_radius = self.r_turn_min + abs(act_steer)*(r_turn_max-self.r_turn_min)
-			rotation = (rot_sign, rot_radius)
+			if act_steer != 0:
+				rot_sign = np.sign(act_steer)
+				steer_ang_max = min(atan(w/self.r_turn_min), atan(w/r_turn_grip)) if r_turn_grip > 0 else atan(w/self.r_turn_min)
+				steer_ang = abs(act_steer)*steer_ang_max
+				rot_radius = w/tan(steer_ang)
+				rotation = (rot_sign, rot_radius)
 		else:
 			action = self.actions_avail[action_in]
 			if action == "accelerate":
@@ -126,7 +130,7 @@ class CarGameEnv:
 				self.vel = max(0,self.vel+(-grip - drag)/self.mass*self.time_per_frame)
 			elif action in ["left","right"]:
 				rot_sign = 1 if action == "right" else -1
-				rot_radius = max(self.r_turn_min, r_turn_max)
+				rot_radius = max(self.r_turn_min, r_turn_grip)
 				rotation = (rot_sign, rot_radius)
 		# implement movements and update scores and statuses
 		self.move(dist, rotation)
@@ -304,7 +308,11 @@ class CarGameEnv:
 
 		return self.viewer.render(return_rgb_array = True)
 
-
+environment = CarGameEnv(True)
+action = [1.0, 0.0]
+while not environment.finished_episode:
+	environment.step(action)
+	environment.render()
 
 
 
@@ -957,28 +965,3 @@ def heuristic(env, s):
         elif angle_todo < -0.05: a = 3
         elif angle_todo > +0.05: a = 1
     return a
-
-# def demo_heuristic_lander(env, seed=None, render=False):
-#     env.seed(seed)
-#     total_reward = 0
-#     steps = 0
-#     s = env.reset()
-#     while True:
-#         a = heuristic(env, s)
-#         s, r, done, info = env.step(a)
-#         total_reward += r
-
-#         if render:
-#             still_open = env.render()
-#             if still_open == False: break
-
-#         if steps % 20 == 0 or done:
-#             print("observations:", " ".join(["{:+0.2f}".format(x) for x in s]))
-#             print("step {} total_reward {:+0.2f}".format(steps, total_reward))
-#         steps += 1
-#         if done: break
-#     return total_reward
-
-
-# if __name__ == '__main__':
-#     demo_heuristic_lander(LunarLander(), render=True)
