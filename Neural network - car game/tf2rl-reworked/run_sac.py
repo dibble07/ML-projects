@@ -7,7 +7,6 @@ from homegym import CarGameEnv, LunarLanderContinuous
 
 if __name__ == '__main__':
     parser = Trainer.get_argument()
-    print(parser.parse_args())
     parser = SAC.get_argument(parser)
     print(parser.parse_args())
     # parser.add_argument('--env-name', type=str, default="Pendulum-v0")
@@ -15,7 +14,6 @@ if __name__ == '__main__':
     parser.set_defaults(n_warmup=10000)
     parser.set_defaults(max_steps=1e6)
     args = parser.parse_args()
-    print(parser.parse_args())
 
     # env = gym.make(args.env_name)
     # test_env = gym.make(args.env_name)

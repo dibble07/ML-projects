@@ -34,7 +34,7 @@ class Trainer:
         # prepare log directory
         self._output_dir = prepare_output_dir(
             args=args, user_specified_dir=self._logdir,
-            suffix="{}_{}".format(self._policy.policy_name, args.dir_suffix))
+            suffix="{}".format(self._policy.policy_name))
         self.logger = initialize_logger(
             logging_level=logging.getLevelName(args.logging_level),
             output_dir=self._output_dir)
@@ -250,8 +250,8 @@ class Trainer:
                             help='Interval to save summary')
         # parser.add_argument('--model-dir', type=str, default=None,
         #                     help='Directory to restore model')
-        parser.add_argument('--dir-suffix', type=str, default='',
-                            help='Suffix for directory that contains results')
+        # parser.add_argument('--dir-suffix', type=str, default='',
+        #                     help='Suffix for directory that contains results')
         # parser.add_argument('--normalize-obs', action='store_true',
         #                     help='Normalize observation')
         parser.add_argument('--logdir', type=str, default='results',

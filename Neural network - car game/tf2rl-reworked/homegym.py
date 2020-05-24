@@ -72,10 +72,10 @@ class CarGameEnv:
 		self.reset()
 		# spaces
 		high = np.ones(len(self.state))
-		self.observation_space = spaces.Box(-high, high)
+		self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 		self.continuous = continuous_flag
 		if self.continuous:
-			self.action_space = spaces.Box(-1, +1, (1,))
+			self.action_space = spaces.Box(-1, +1, (1,), dtype=np.float32)
 		else:
 			self.actions_avail = ["accelerate" , "decelerate", "maintain", "left", "right"]
 			self.action_space = spaces.Discrete(len(self.actions_avail))
