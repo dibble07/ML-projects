@@ -29,7 +29,6 @@ if __name__ == '__main__':
         max_action=env.action_space.high[0],
         batch_size=args.batch_size,
         n_warmup=args.n_warmup,
-        alpha=args.alpha,
-        auto_alpha=args.auto_alpha)
+        alpha=args.alpha)#, auto_alpha=args.auto_alpha
     trainer = Trainer(policy, env, args, test_env=test_env)
     trainer()

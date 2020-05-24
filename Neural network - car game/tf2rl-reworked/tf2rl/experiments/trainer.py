@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 from gym.spaces import Box
 
-from tf2rl.experiments.utils import save_path, frames_to_gif
+from tf2rl.experiments.utils import save_path#, frames_to_gif
 from tf2rl.misc.get_replay_buffer import get_replay_buffer
 from tf2rl.misc.prepare_output_dir import prepare_output_dir
 from tf2rl.misc.initialize_logger import initialize_logger
@@ -39,8 +39,8 @@ class Trainer:
             logging_level=logging.getLevelName(args.logging_level),
             output_dir=self._output_dir)
 
-        if args.evaluate:
-            assert args.model_dir is not None
+        # if args.evaluate:
+        #     assert args.model_dir is not None
         self._set_check_point(args.model_dir)
 
         # prepare TensorBoard output
@@ -79,8 +79,8 @@ class Trainer:
                 action = self._policy.get_action(obs)
 
             next_obs, reward, done, _ = self._env.step(action)
-            if self._show_progress:
-                self._env.render()
+            # if self._show_progress:
+            #     self._env.render()
             episode_steps += 1
             episode_return += reward
             total_steps += 1
@@ -167,9 +167,9 @@ class Trainer:
         #     self._test_env.normalizer.set_params(
         #         *self._env.normalizer.get_params())
         avg_test_return = 0.
-        if self._save_test_path:
-            replay_buffer = get_replay_buffer(
-                self._policy, self._test_env, size=self._episode_max_steps)
+        # if self._save_test_path:
+        #     replay_buffer = get_replay_buffer(
+        #         self._policy, self._test_env, size=self._episode_max_steps)
         for i in range(self._test_episodes):
             episode_return = 0.
             frames = []
@@ -177,32 +177,32 @@ class Trainer:
             for _ in range(self._episode_max_steps):
                 action = self._policy.get_action(obs, test=True)
                 next_obs, reward, done, _ = self._test_env.step(action)
-                if self._save_test_path:
-                    replay_buffer.add(obs=obs, act=action,
-                                      next_obs=next_obs, rew=reward, done=done)
+                # if self._save_test_path:
+                #     replay_buffer.add(obs=obs, act=action,
+                #                       next_obs=next_obs, rew=reward, done=done)
 
-                if self._save_test_movie:
-                    frames.append(self._test_env.render(mode='rgb_array'))
-                elif self._show_test_progress:
-                    self._test_env.render()
+                # if self._save_test_movie:
+                #     frames.append(self._test_env.render(mode='rgb_array'))
+                # elif self._show_test_progress:
+                #     self._test_env.render()
                 episode_return += reward
                 obs = next_obs
                 if done:
                     break
             prefix = "step_{0:08d}_epi_{1:02d}_return_{2:010.4f}".format(
                 total_steps, i, episode_return)
-            if self._save_test_path:
-                save_path(replay_buffer._encode_sample(np.arange(self._episode_max_steps)),
-                          os.path.join(self._output_dir, prefix + ".pkl"))
-                replay_buffer.clear()
-            if self._save_test_movie:
-                frames_to_gif(frames, prefix, self._output_dir)
+            # if self._save_test_path:
+            #     save_path(replay_buffer._encode_sample(np.arange(self._episode_max_steps)),
+            #               os.path.join(self._output_dir, prefix + ".pkl"))
+            #     replay_buffer.clear()
+            # if self._save_test_movie:
+            #     frames_to_gif(frames, prefix, self._output_dir)
             avg_test_return += episode_return
-        if self._show_test_images:
-            images = tf.cast(
-                tf.expand_dims(np.array(obs).transpose(2, 0, 1), axis=3),
-                tf.uint8)
-            tf.summary.image('train/input_img', images,)
+        # if self._show_test_images:
+        #     images = tf.cast(
+        #         tf.expand_dims(np.array(obs).transpose(2, 0, 1), axis=3),
+        #         tf.uint8)
+        #     tf.summary.image('train/input_img', images,)
         return avg_test_return / self._test_episodes
 
     def _set_from_args(self, args):
@@ -212,7 +212,7 @@ class Trainer:
             if args.episode_max_steps is not None \
             else args.max_steps
         self._n_experiments = args.n_experiments
-        self._show_progress = args.show_progress
+        # self._show_progress = args.show_progress
         self._save_model_interval = args.save_model_interval
         self._save_summary_interval = args.save_summary_interval
         # self._normalize_obs = args.normalize_obs
@@ -224,11 +224,11 @@ class Trainer:
         # self._n_step = args.n_step
         # test settings
         self._test_interval = args.test_interval
-        self._show_test_progress = args.show_test_progress
+        # self._show_test_progress = args.show_test_progress
         self._test_episodes = args.test_episodes
-        self._save_test_path = args.save_test_path
-        self._save_test_movie = args.save_test_movie
-        self._show_test_images = args.show_test_images
+        # self._save_test_path = args.save_test_path
+        # self._save_test_movie = args.save_test_movie
+        # self._show_test_images = args.show_test_images
 
     @staticmethod
     def get_argument(parser=None):
@@ -241,8 +241,8 @@ class Trainer:
                             help='Maximum steps in an episode')
         parser.add_argument('--n-experiments', type=int, default=1,
                             help='Number of experiments')
-        parser.add_argument('--show-progress', action='store_true',
-                            help='Call `render` in training process')
+        # parser.add_argument('--show-progress', action='store_true',
+        #                     help='Call `render` in training process')
         parser.add_argument('--save-model-interval', type=int, default=int(1e4),
                             help='Interval to save model')
         parser.add_argument('--save-summary-interval', type=int, default=int(1e3),
@@ -256,27 +256,27 @@ class Trainer:
         parser.add_argument('--logdir', type=str, default='results',
                             help='Output directory')
         # test settings
-        parser.add_argument('--evaluate', action='store_true',
-                            help='Evaluate trained model')
+        # parser.add_argument('--evaluate', action='store_true',
+        #                     help='Evaluate trained model')
         parser.add_argument('--test-interval', type=int, default=int(1e4),
                             help='Interval to evaluate trained model')
-        parser.add_argument('--show-test-progress', action='store_true',
-                            help='Call `render` in evaluation process')
+        # parser.add_argument('--show-test-progress', action='store_true',
+        #                     help='Call `render` in evaluation process')
         parser.add_argument('--test-episodes', type=int, default=5,
                             help='Number of episodes to evaluate at once')
-        parser.add_argument('--save-test-path', action='store_true',
-                            help='Save trajectories of evaluation')
-        parser.add_argument('--show-test-images', action='store_true',
-                            help='Show input images to neural networks when an episode finishes')
-        parser.add_argument('--save-test-movie', action='store_true',
-                            help='Save rendering results')
+        # parser.add_argument('--save-test-path', action='store_true',
+        #                     help='Save trajectories of evaluation')
+        # parser.add_argument('--show-test-images', action='store_true',
+        #                     help='Show input images to neural networks when an episode finishes')
+        # parser.add_argument('--save-test-movie', action='store_true',
+        #                     help='Save rendering results')
         # replay buffer
-        parser.add_argument('--use-prioritized-rb', action='store_true',
-                            help='Flag to use prioritized experience replay')
-        parser.add_argument('--use-nstep-rb', action='store_true',
-                            help='Flag to use nstep experience replay')
-        parser.add_argument('--n-step', type=int, default=4,
-                            help='Number of steps to look over')
+        # parser.add_argument('--use-prioritized-rb', action='store_true',
+        #                     help='Flag to use prioritized experience replay')
+        # parser.add_argument('--use-nstep-rb', action='store_true',
+        #                     help='Flag to use nstep experience replay')
+        # parser.add_argument('--n-step', type=int, default=4,
+        #                     help='Number of steps to look over')
         # others
         parser.add_argument('--logging-level', choices=['DEBUG', 'INFO', 'WARNING'],
                             default='INFO', help='Logging level')

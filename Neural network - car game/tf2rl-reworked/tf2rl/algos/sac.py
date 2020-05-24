@@ -64,7 +64,7 @@ class SAC(OffPolicyAgent):
             critic_units=[256, 256],
             tau=0.005,
             alpha=.2,
-            auto_alpha=False,
+            # auto_alpha=False,
             n_warmup=int(1e4),
             memory_capacity=int(1e6),
             **kwargs):
@@ -78,16 +78,17 @@ class SAC(OffPolicyAgent):
 
         # Set hyper-parameters
         self.tau = tau
-        self.auto_alpha = auto_alpha
+        # self.auto_alpha = auto_alpha
         self.state_ndim = len(state_shape)
-        if auto_alpha:
-            self.log_alpha = tf.Variable(0., dtype=tf.float32)
-            self.alpha = tf.Variable(0., dtype=tf.float32)
-            self.alpha.assign(tf.exp(self.log_alpha))
-            self.target_alpha = -action_dim
-            self.alpha_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
-        else:
-            self.alpha = alpha
+        # if auto_alpha:
+        #     self.log_alpha = tf.Variable(0., dtype=tf.float32)
+        #     self.alpha = tf.Variable(0., dtype=tf.float32)
+        #     self.alpha.assign(tf.exp(self.log_alpha))
+        #     self.target_alpha = -action_dim
+        #     self.alpha_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
+        # else:
+        #     self.alpha = alpha
+        self.alpha = alpha
 
     def _setup_actor(self, state_shape, action_dim, actor_units, lr, max_action=1.):
         self.actor = GaussianActor(
@@ -137,9 +138,9 @@ class SAC(OffPolicyAgent):
         tf.summary.scalar(name=self.policy_name+"/logp_min", data=logp_min)
         tf.summary.scalar(name=self.policy_name+"/logp_max", data=logp_max)
         tf.summary.scalar(name=self.policy_name+"/logp_mean", data=logp_mean)
-        if self.auto_alpha:
-            tf.summary.scalar(name=self.policy_name + "/log_ent", data=self.log_alpha)
-            tf.summary.scalar(name=self.policy_name+"/logp_mean+target", data=logp_mean+self.target_alpha)
+        # if self.auto_alpha:
+        #     tf.summary.scalar(name=self.policy_name + "/log_ent", data=self.log_alpha)
+        #     tf.summary.scalar(name=self.policy_name+"/logp_mean+target", data=logp_mean+self.target_alpha)
         tf.summary.scalar(name=self.policy_name+"/ent", data=self.alpha)
 
         return td_errors
@@ -184,9 +185,9 @@ class SAC(OffPolicyAgent):
                     (self.alpha * logp - current_min_q) * weights)  # Eq.(12)
 
                 # Compute loss of temperature parameter for entropy
-                if self.auto_alpha:
-                    alpha_loss = -tf.reduce_mean(
-                        (self.log_alpha * tf.stop_gradient(logp + self.target_alpha)))
+                # if self.auto_alpha:
+                #     alpha_loss = -tf.reduce_mean(
+                #         (self.log_alpha * tf.stop_gradient(logp + self.target_alpha)))
 
             q1_grad = tape.gradient(td_loss_q1, self.qf1.trainable_variables)
             self.qf1_optimizer.apply_gradients(
@@ -206,11 +207,11 @@ class SAC(OffPolicyAgent):
             self.actor_optimizer.apply_gradients(
                 zip(actor_grad, self.actor.trainable_variables))
 
-            if self.auto_alpha:
-                alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
-                self.alpha_optimizer.apply_gradients(
-                    zip(alpha_grad, [self.log_alpha]))
-                self.alpha.assign(tf.exp(self.log_alpha))
+            # if self.auto_alpha:
+            #     alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
+            #     self.alpha_optimizer.apply_gradients(
+            #         zip(alpha_grad, [self.log_alpha]))
+            #     self.alpha.assign(tf.exp(self.log_alpha))
 
             del tape
 
@@ -244,5 +245,5 @@ class SAC(OffPolicyAgent):
     def get_argument(parser=None):
         parser = OffPolicyAgent.get_argument(parser)
         parser.add_argument('--alpha', type=float, default=0.2)
-        parser.add_argument('--auto-alpha', action="store_true")
+        # parser.add_argument('--auto-alpha', action="store_true")
         return parser
