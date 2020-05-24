@@ -41,23 +41,24 @@ class Trainer:
 
         # if args.evaluate:
         #     assert args.model_dir is not None
-        self._set_check_point(args.model_dir)
+        # self._set_check_point(args.model_dir)
+        self._set_check_point()
 
         # prepare TensorBoard output
         self.writer = tf.summary.create_file_writer(self._output_dir)
         self.writer.set_as_default()
 
-    def _set_check_point(self, model_dir):
+    def _set_check_point(self):
         # Save and restore model
         self._checkpoint = tf.train.Checkpoint(policy=self._policy)
         self.checkpoint_manager = tf.train.CheckpointManager(
             self._checkpoint, directory=self._output_dir, max_to_keep=5)
 
-        if model_dir is not None:
-            assert os.path.isdir(model_dir)
-            self._latest_path_ckpt = tf.train.latest_checkpoint(model_dir)
-            self._checkpoint.restore(self._latest_path_ckpt)
-            self.logger.info("Restored {}".format(self._latest_path_ckpt))
+        # if model_dir is not None:
+        #     assert os.path.isdir(model_dir)
+        #     self._latest_path_ckpt = tf.train.latest_checkpoint(model_dir)
+        #     self._checkpoint.restore(self._latest_path_ckpt)
+        #     self.logger.info("Restored {}".format(self._latest_path_ckpt))
 
     def __call__(self):
         total_steps = 0
@@ -148,9 +149,9 @@ class Trainer:
         """
         Periodically search the latest checkpoint, and keep evaluating with the latest model until user kills process.
         """
-        if self._model_dir is None:
-            self.logger.error("Please specify model directory by passing command line argument `--model-dir`")
-            exit(-1)
+        # if self._model_dir is None:
+        #     self.logger.error("Please specify model directory by passing command line argument `--model-dir`")
+        #     exit(-1)
 
         self.evaluate_policy(total_steps=0)
         while True:
@@ -217,7 +218,7 @@ class Trainer:
         self._save_summary_interval = args.save_summary_interval
         # self._normalize_obs = args.normalize_obs
         self._logdir = args.logdir
-        self._model_dir = args.model_dir
+        # self._model_dir = args.model_dir
         # replay buffer
         # self._use_prioritized_rb = args.use_prioritized_rb
         # self._use_nstep_rb = args.use_nstep_rb
@@ -247,8 +248,8 @@ class Trainer:
                             help='Interval to save model')
         parser.add_argument('--save-summary-interval', type=int, default=int(1e3),
                             help='Interval to save summary')
-        parser.add_argument('--model-dir', type=str, default=None,
-                            help='Directory to restore model')
+        # parser.add_argument('--model-dir', type=str, default=None,
+        #                     help='Directory to restore model')
         parser.add_argument('--dir-suffix', type=str, default='',
                             help='Suffix for directory that contains results')
         # parser.add_argument('--normalize-obs', action='store_true',

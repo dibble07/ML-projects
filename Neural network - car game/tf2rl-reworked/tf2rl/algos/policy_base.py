@@ -12,8 +12,7 @@ class Policy(tf.keras.Model):
             discount=0.99,
             n_warmup=0,
             max_grad=10.,
-            n_epoch=1,
-            gpu=0):
+            n_epoch=1):#, gpu=0
         super().__init__()
         self.policy_name = name
         self.update_interval = update_interval
@@ -23,7 +22,8 @@ class Policy(tf.keras.Model):
         self.n_epoch = n_epoch
         self.max_grad = max_grad
         self.memory_capacity = memory_capacity
-        self.device = "/gpu:{}".format(gpu) if gpu >= 0 else "/cpu:0"
+        # self.device = "/gpu:{}".format(gpu) if gpu >= 0 else "/cpu:0"
+        self.device = "/cpu:0"
 
     def get_action(self, observation, test=False):
         raise NotImplementedError
@@ -35,8 +35,7 @@ class Policy(tf.keras.Model):
             parser = argparse.ArgumentParser(conflict_handler='resolve')
         parser.add_argument('--n-warmup', type=int, default=int(1e4))
         parser.add_argument('--batch-size', type=int, default=32)
-        parser.add_argument('--gpu', type=int, default=0,
-                            help='GPU id')
+        # parser.add_argument('--gpu', type=int, default=0, help='GPU id')
         return parser
 
 
