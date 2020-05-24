@@ -67,9 +67,8 @@ class Trainer:
         episode_start_time = time.perf_counter()
         n_episode = 0
 
-        replay_buffer = get_replay_buffer(
-            self._policy, self._env, self._use_prioritized_rb,
-            self._use_nstep_rb, self._n_step)
+        replay_buffer = get_replay_buffer(self._policy, self._env)
+        # replay_buffer = get_replay_buffer(self._policy, self._env, self._use_prioritized_rb, self._use_nstep_rb, self._n_step)
 
         obs = self._env.reset()
 
@@ -120,13 +119,14 @@ class Trainer:
                     self._policy.train(
                         samples["obs"], samples["act"], samples["next_obs"],
                         samples["rew"], np.array(samples["done"], dtype=np.float32),
-                        None if not self._use_prioritized_rb else samples["weights"])
-                if self._use_prioritized_rb:
-                    td_error = self._policy.compute_td_error(
-                        samples["obs"], samples["act"], samples["next_obs"],
-                        samples["rew"], np.array(samples["done"], dtype=np.float32))
-                    replay_buffer.update_priorities(
-                        samples["indexes"], np.abs(td_error) + 1e-6)
+                        None)
+                        # None if not self._use_prioritized_rb else samples["weights"])
+                # if self._use_prioritized_rb:
+                #     td_error = self._policy.compute_td_error(
+                #         samples["obs"], samples["act"], samples["next_obs"],
+                #         samples["rew"], np.array(samples["done"], dtype=np.float32))
+                #     replay_buffer.update_priorities(
+                #         samples["indexes"], np.abs(td_error) + 1e-6)
 
             if total_steps % self._test_interval == 0:
                 avg_test_return = self.evaluate_policy(total_steps)
@@ -219,9 +219,9 @@ class Trainer:
         self._logdir = args.logdir
         self._model_dir = args.model_dir
         # replay buffer
-        self._use_prioritized_rb = args.use_prioritized_rb
-        self._use_nstep_rb = args.use_nstep_rb
-        self._n_step = args.n_step
+        # self._use_prioritized_rb = args.use_prioritized_rb
+        # self._use_nstep_rb = args.use_nstep_rb
+        # self._n_step = args.n_step
         # test settings
         self._test_interval = args.test_interval
         self._show_test_progress = args.show_test_progress
