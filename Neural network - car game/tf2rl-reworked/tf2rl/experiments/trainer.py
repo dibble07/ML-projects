@@ -9,8 +9,8 @@ from gym.spaces import Box
 
 from tf2rl.experiments.utils import save_path#, frames_to_gif
 from tf2rl.misc.get_replay_buffer import get_replay_buffer
-from tf2rl.misc.prepare_output_dir import prepare_output_dir
-from tf2rl.misc.initialize_logger import initialize_logger
+# from tf2rl.misc.prepare_output_dir import prepare_output_dir
+# from tf2rl.misc.initialize_logger import initialize_logger
 # from tf2rl.envs.normalizer import EmpiricalNormalizer
 
 
@@ -32,27 +32,27 @@ class Trainer:
         #         shape=env.observation_space.shape)
 
         # prepare log directory
-        self._output_dir = prepare_output_dir(
-            args=args, user_specified_dir=self._logdir,
-            suffix="{}".format(self._policy.policy_name))
-        self.logger = initialize_logger(
-            logging_level=logging.getLevelName(args.logging_level),
-            output_dir=self._output_dir)
+        # self._output_dir = prepare_output_dir(
+        #     args=args, user_specified_dir=self._logdir,
+        #     suffix="{}".format(self._policy.policy_name))
+        # self.logger = initialize_logger(
+        #     logging_level=logging.getLevelName(args.logging_level),
+        #     output_dir=self._output_dir)
 
         # if args.evaluate:
         #     assert args.model_dir is not None
         # self._set_check_point(args.model_dir)
-        self._set_check_point()
+        # self._set_check_point()
 
         # prepare TensorBoard output
-        self.writer = tf.summary.create_file_writer(self._output_dir)
-        self.writer.set_as_default()
+        # self.writer = tf.summary.create_file_writer(self._output_dir)
+        # self.writer.set_as_default()
 
-    def _set_check_point(self):
-        # Save and restore model
-        self._checkpoint = tf.train.Checkpoint(policy=self._policy)
-        self.checkpoint_manager = tf.train.CheckpointManager(
-            self._checkpoint, directory=self._output_dir, max_to_keep=5)
+    # def _set_check_point(self):
+    #     # Save and restore model
+    #     self._checkpoint = tf.train.Checkpoint(policy=self._policy)
+    #     self.checkpoint_manager = tf.train.CheckpointManager(
+    #         self._checkpoint, directory=self._output_dir, max_to_keep=5)
 
         # if model_dir is not None:
         #     assert os.path.isdir(model_dir)
@@ -62,7 +62,7 @@ class Trainer:
 
     def __call__(self):
         total_steps = 0
-        tf.summary.experimental.set_step(total_steps)
+        # tf.summary.experimental.set_step(total_steps)
         episode_steps = 0
         episode_return = 0
         episode_start_time = time.perf_counter()
@@ -85,7 +85,7 @@ class Trainer:
             episode_steps += 1
             episode_return += reward
             total_steps += 1
-            tf.summary.experimental.set_step(total_steps)
+            # tf.summary.experimental.set_step(total_steps)
 
             done_flag = done
             if hasattr(self._env, "_max_episode_steps") and \
@@ -102,10 +102,10 @@ class Trainer:
                 fps = episode_steps / (time.perf_counter() - episode_start_time)
                 print("Total Epi: {0: 5} Steps: {1: 7} Episode Steps: {2: 5} Return: {3: 5.4f} FPS: {4:5.2f}".format(
                     n_episode, total_steps, episode_steps, episode_return, fps))
-                self.logger.info("Total Epi: {0: 5} Steps: {1: 7} Episode Steps: {2: 5} Return: {3: 5.4f} FPS: {4:5.2f}".format(
-                    n_episode, total_steps, episode_steps, episode_return, fps))
-                tf.summary.scalar(
-                    name="Common/training_return", data=episode_return)
+                # self.logger.info("Total Epi: {0: 5} Steps: {1: 7} Episode Steps: {2: 5} Return: {3: 5.4f} FPS: {4:5.2f}".format(
+                #     n_episode, total_steps, episode_steps, episode_return, fps))
+                # tf.summary.scalar(
+                #     name="Common/training_return", data=episode_return)
 
                 episode_steps = 0
                 episode_return = 0
@@ -116,11 +116,11 @@ class Trainer:
 
             if total_steps % self._policy.update_interval == 0:
                 samples = replay_buffer.sample(self._policy.batch_size)
-                with tf.summary.record_if(total_steps % self._save_summary_interval == 0):
-                    self._policy.train(
-                        samples["obs"], samples["act"], samples["next_obs"],
-                        samples["rew"], np.array(samples["done"], dtype=np.float32),
-                        None)
+                # with tf.summary.record_if(total_steps % self._save_summary_interval == 0):
+                #     self._policy.train(
+                #         samples["obs"], samples["act"], samples["next_obs"],
+                #         samples["rew"], np.array(samples["done"], dtype=np.float32),
+                #         None)
                         # None if not self._use_prioritized_rb else samples["weights"])
                 # if self._use_prioritized_rb:
                 #     td_error = self._policy.compute_td_error(
@@ -133,17 +133,17 @@ class Trainer:
                 avg_test_return = self.evaluate_policy(total_steps)
                 print("Evaluation Total Steps: {0: 7} Average Reward {1: 5.4f} over {2: 2} episodes".format(
                     total_steps, avg_test_return, self._test_episodes))
-                self.logger.info("Evaluation Total Steps: {0: 7} Average Reward {1: 5.4f} over {2: 2} episodes".format(
-                    total_steps, avg_test_return, self._test_episodes))
-                tf.summary.scalar(
-                    name="Common/average_test_return", data=avg_test_return)
-                tf.summary.scalar(name="Common/fps", data=fps)
-                self.writer.flush()
+                # self.logger.info("Evaluation Total Steps: {0: 7} Average Reward {1: 5.4f} over {2: 2} episodes".format(
+                #     total_steps, avg_test_return, self._test_episodes))
+                # tf.summary.scalar(
+                #     name="Common/average_test_return", data=avg_test_return)
+                # tf.summary.scalar(name="Common/fps", data=fps)
+                # self.writer.flush()
 
-            if total_steps % self._save_model_interval == 0:
-                self.checkpoint_manager.save()
+            # if total_steps % self._save_model_interval == 0:
+            #     self.checkpoint_manager.save()
 
-        tf.summary.flush()
+        # tf.summary.flush()
 
     def evaluate_policy_continuously(self):
         """
@@ -159,11 +159,11 @@ class Trainer:
             if self._latest_path_ckpt != latest_path_ckpt:
                 self._latest_path_ckpt = latest_path_ckpt
                 self._checkpoint.restore(self._latest_path_ckpt)
-                self.logger.info("Restored {}".format(self._latest_path_ckpt))
+                # self.logger.info("Restored {}".format(self._latest_path_ckpt))
             self.evaluate_policy(total_steps=0)
 
     def evaluate_policy(self, total_steps):
-        tf.summary.experimental.set_step(total_steps)
+        # tf.summary.experimental.set_step(total_steps)
         # if self._normalize_obs:
         #     self._test_env.normalizer.set_params(
         #         *self._env.normalizer.get_params())
@@ -215,9 +215,9 @@ class Trainer:
         self._n_experiments = args.n_experiments
         # self._show_progress = args.show_progress
         self._save_model_interval = args.save_model_interval
-        self._save_summary_interval = args.save_summary_interval
+        # self._save_summary_interval = args.save_summary_interval
         # self._normalize_obs = args.normalize_obs
-        self._logdir = args.logdir
+        # self._logdir = args.logdir
         # self._model_dir = args.model_dir
         # replay buffer
         # self._use_prioritized_rb = args.use_prioritized_rb
@@ -246,16 +246,16 @@ class Trainer:
         #                     help='Call `render` in training process')
         parser.add_argument('--save-model-interval', type=int, default=int(1e4),
                             help='Interval to save model')
-        parser.add_argument('--save-summary-interval', type=int, default=int(1e3),
-                            help='Interval to save summary')
+        # parser.add_argument('--save-summary-interval', type=int, default=int(1e3),
+        #                     help='Interval to save summary')
         # parser.add_argument('--model-dir', type=str, default=None,
         #                     help='Directory to restore model')
         # parser.add_argument('--dir-suffix', type=str, default='',
         #                     help='Suffix for directory that contains results')
         # parser.add_argument('--normalize-obs', action='store_true',
         #                     help='Normalize observation')
-        parser.add_argument('--logdir', type=str, default='results',
-                            help='Output directory')
+        # parser.add_argument('--logdir', type=str, default='results',
+        #                     help='Output directory')
         # test settings
         # parser.add_argument('--evaluate', action='store_true',
         #                     help='Evaluate trained model')
@@ -279,6 +279,6 @@ class Trainer:
         # parser.add_argument('--n-step', type=int, default=4,
         #                     help='Number of steps to look over')
         # others
-        parser.add_argument('--logging-level', choices=['DEBUG', 'INFO', 'WARNING'],
-                            default='INFO', help='Logging level')
+        # parser.add_argument('--logging-level', choices=['DEBUG', 'INFO', 'WARNING'],
+        #                     default='INFO', help='Logging level')
         return parser
