@@ -50,7 +50,7 @@ class CarGameEnv:
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 		# initialise car
-		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
+		self.sense_ang = np.array([0])# np.linspace(-90, 90, num=9, endpoint = True)
 		self.mass = 750
 		self.aero_drag_v2 = 0.5*1.225*1.3
 		self.aero_down_v2 = self.aero_drag_v2*2.5
@@ -75,7 +75,7 @@ class CarGameEnv:
 		self.observation_space = spaces.Box(-high, high)
 		self.continuous = continuous_flag
 		if self.continuous:
-			self.action_space = spaces.Box(-1, +1, (2,))
+			self.action_space = spaces.Box(-1, +1, (1,))
 		else:
 			self.actions_avail = ["accelerate" , "decelerate", "maintain", "left", "right"]
 			self.action_space = spaces.Discrete(len(self.actions_avail))
@@ -112,7 +112,9 @@ class CarGameEnv:
 		rotation = None
 		if self.continuous:
 			w = 3.7
-			act_for_aft, act_steer = action_in
+			# act_for_aft, act_steer = action_in
+			act_steer = 0
+			act_for_aft = action_in[0]
 			for_aft_force_max = self.forward_force if act_for_aft >= 0 else -grip
 			for_aft_force = abs(act_for_aft)*for_aft_force_max
 			self.vel = max(0,self.vel+(for_aft_force - drag)/self.mass*self.time_per_frame)
@@ -308,11 +310,13 @@ class CarGameEnv:
 
 		return self.viewer.render(return_rgb_array = True)
 
-environment = CarGameEnv(True)
-action = [1.0, 0.0]
-while not environment.finished_episode:
-	environment.step(action)
-	environment.render()
+# environment = CarGameEnv(True)
+# action = [1.0]
+# while not environment.finished_episode:
+# 	state, __, __, __ = environment.step(action)
+# 	print(state)
+# 	action = [1.0] if state[0]>0.3 else [-1.0]
+# 	environment.render()
 
 
 
