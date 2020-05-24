@@ -11,7 +11,7 @@ from tf2rl.experiments.utils import save_path, frames_to_gif
 from tf2rl.misc.get_replay_buffer import get_replay_buffer
 from tf2rl.misc.prepare_output_dir import prepare_output_dir
 from tf2rl.misc.initialize_logger import initialize_logger
-from tf2rl.envs.normalizer import EmpiricalNormalizer
+# from tf2rl.envs.normalizer import EmpiricalNormalizer
 
 
 if tf.config.experimental.list_physical_devices('GPU'):
@@ -21,20 +21,15 @@ if tf.config.experimental.list_physical_devices('GPU'):
 
 
 class Trainer:
-    def __init__(
-            self,
-            policy,
-            env,
-            args,
-            test_env=None):
+    def __init__(self, policy, env, args, test_env=None):
         self._set_from_args(args)
         self._policy = policy
         self._env = env
         self._test_env = self._env if test_env is None else test_env
-        if self._normalize_obs:
-            assert isinstance(env.observation_space, Box)
-            self._obs_normalizer = EmpiricalNormalizer(
-                shape=env.observation_space.shape)
+        # if self._normalize_obs:
+        #     assert isinstance(env.observation_space, Box)
+        #     self._obs_normalizer = EmpiricalNormalizer(
+        #         shape=env.observation_space.shape)
 
         # prepare log directory
         self._output_dir = prepare_output_dir(
@@ -105,6 +100,8 @@ class Trainer:
 
                 n_episode += 1
                 fps = episode_steps / (time.perf_counter() - episode_start_time)
+                print("Total Epi: {0: 5} Steps: {1: 7} Episode Steps: {2: 5} Return: {3: 5.4f} FPS: {4:5.2f}".format(
+                    n_episode, total_steps, episode_steps, episode_return, fps))
                 self.logger.info("Total Epi: {0: 5} Steps: {1: 7} Episode Steps: {2: 5} Return: {3: 5.4f} FPS: {4:5.2f}".format(
                     n_episode, total_steps, episode_steps, episode_return, fps))
                 tf.summary.scalar(
@@ -133,6 +130,8 @@ class Trainer:
 
             if total_steps % self._test_interval == 0:
                 avg_test_return = self.evaluate_policy(total_steps)
+                print("Evaluation Total Steps: {0: 7} Average Reward {1: 5.4f} over {2: 2} episodes".format(
+                    total_steps, avg_test_return, self._test_episodes))
                 self.logger.info("Evaluation Total Steps: {0: 7} Average Reward {1: 5.4f} over {2: 2} episodes".format(
                     total_steps, avg_test_return, self._test_episodes))
                 tf.summary.scalar(
@@ -164,9 +163,9 @@ class Trainer:
 
     def evaluate_policy(self, total_steps):
         tf.summary.experimental.set_step(total_steps)
-        if self._normalize_obs:
-            self._test_env.normalizer.set_params(
-                *self._env.normalizer.get_params())
+        # if self._normalize_obs:
+        #     self._test_env.normalizer.set_params(
+        #         *self._env.normalizer.get_params())
         avg_test_return = 0.
         if self._save_test_path:
             replay_buffer = get_replay_buffer(
@@ -216,7 +215,7 @@ class Trainer:
         self._show_progress = args.show_progress
         self._save_model_interval = args.save_model_interval
         self._save_summary_interval = args.save_summary_interval
-        self._normalize_obs = args.normalize_obs
+        # self._normalize_obs = args.normalize_obs
         self._logdir = args.logdir
         self._model_dir = args.model_dir
         # replay buffer
@@ -252,8 +251,8 @@ class Trainer:
                             help='Directory to restore model')
         parser.add_argument('--dir-suffix', type=str, default='',
                             help='Suffix for directory that contains results')
-        parser.add_argument('--normalize-obs', action='store_true',
-                            help='Normalize observation')
+        # parser.add_argument('--normalize-obs', action='store_true',
+        #                     help='Normalize observation')
         parser.add_argument('--logdir', type=str, default='results',
                             help='Output directory')
         # test settings

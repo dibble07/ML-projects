@@ -13,6 +13,7 @@ if __name__ == '__main__':
     parser.set_defaults(n_warmup=10000)
     parser.set_defaults(max_steps=1e6)
     args = parser.parse_args()
+    print(args)
 
     # env = gym.make(args.env_name)
     # test_env = gym.make(args.env_name)
