@@ -56,13 +56,12 @@ class DQN(OffPolicyAgent):
             epsilon_min=None,
             epsilon_decay_step=int(1e6),
             target_replace_interval=int(5e3),
-            memory_capacity=int(1e6),
             optimizer=None,
             enable_double_dqn=False,
             enable_dueling_dqn=False,
             enable_noisy_dqn=False,
             **kwargs):
-        super().__init__(name=name, memory_capacity=memory_capacity, **kwargs)
+        super().__init__(name=name, **kwargs)
 
         q_func = q_func if q_func is not None else QFunc
         # Define and initialize Q-function network

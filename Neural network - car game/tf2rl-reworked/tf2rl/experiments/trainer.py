@@ -3,10 +3,47 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from tf2rl.misc.get_replay_buffer import get_replay_buffer
+from gym.spaces.box import Box
+from gym.spaces.discrete import Discrete
+
+from cpprb import ReplayBuffer, PrioritizedReplayBuffer
+
+def get_space_size(space):
+    if isinstance(space, Box):
+        return space.shape
+    elif isinstance(space, Discrete):
+        return [1, ]  # space.n
+    else:
+        raise NotImplementedError("Assuming to use Box or Discrete, not {}".format(type(space)))
+
+
+def get_default_rb_dict(env):
+    return {
+        "default_dtype": np.float32,
+        "env_dict": {
+            "obs": {
+                "shape": get_space_size(env.observation_space)},
+            "next_obs": {
+                "shape": get_space_size(env.observation_space)},
+            "act": {
+                "shape": get_space_size(env.action_space)},
+            "rew": {},
+            "done": {}}}
+
+
+def get_replay_buffer(env, use_prioritized_rb, size):
+    obs_shape = get_space_size(env.observation_space)
+    kwargs = get_default_rb_dict(env)
+    kwargs["size"] = size
+
+    if use_prioritized_rb:
+        return PrioritizedReplayBuffer(**kwargs)
+    else:
+        return ReplayBuffer(**kwargs)
+
 
 class Trainer:
-    def __init__(self, policy, env, use_prioritized_rb, show_test_progress, max_steps, test_interval):
+    def __init__(self, policy, env, use_prioritized_rb, show_test_progress, max_steps, test_interval, memory_capacity):
         self._policy = policy
         self._env = env
         self._test_env = self._env
@@ -14,6 +51,7 @@ class Trainer:
         self._show_test_progress = show_test_progress
         self._max_steps = max_steps
         self._test_interval = test_interval
+        self._memory_capacity = memory_capacity
 
     def __call__(self):
         total_steps = 0
@@ -21,8 +59,7 @@ class Trainer:
         episode_return = 0
         n_episode = 0
 
-        replay_buffer = get_replay_buffer(
-            self._policy, self._env, self._use_prioritized_rb)
+        replay_buffer = get_replay_buffer(self._env, self._use_prioritized_rb, self._memory_capacity)
 
         obs = self._env.reset()
 

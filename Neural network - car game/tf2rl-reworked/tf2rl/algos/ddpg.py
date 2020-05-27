@@ -53,8 +53,8 @@ class Critic(tf.keras.Model):
 
 
 class DDPG(OffPolicyAgent):
-    def __init__(self, state_shape, action_dim, name="DDPG", max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[400, 300], critic_units=[400, 300], sigma=0.1, tau=0.005, memory_capacity=int(1e6), **kwargs):
-        super().__init__(name=name, memory_capacity=memory_capacity, **kwargs)
+    def __init__(self, state_shape, action_dim, name="DDPG", max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[400, 300], critic_units=[400, 300], sigma=0.1, tau=0.005, **kwargs):
+        super().__init__(name=name, **kwargs)
 
         # Define and initialize Actor network
         self.actor = Actor(state_shape, action_dim, max_action, actor_units)
