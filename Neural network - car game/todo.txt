@@ -1,7 +1,11 @@
 tf2rl:
 understand options
-refine grip useage in environment
 simplify tf2rl - maintinaing DQN/DDPG with options
+	remove args/default parameters
+	combine algorithm funs
+	reduce number of files to import
+	incorporate trainer function
+refine grip useage in environment
 
 misc:
 plot text of score in centre

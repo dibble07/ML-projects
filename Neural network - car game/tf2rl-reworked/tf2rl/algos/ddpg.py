@@ -103,13 +103,6 @@ class DDPG(OffPolicyAgent):
             weights = np.ones_like(rewards)
         actor_loss, critic_loss, td_errors = self._train_body(
             states, actions, next_states, rewards, done, weights)
-
-        # if actor_loss is not None:
-        #     tf.summary.scalar(name=self.policy_name+"/actor_loss",
-        #                       data=actor_loss)
-        # tf.summary.scalar(name=self.policy_name+"/critic_loss",
-        #                   data=critic_loss)
-
         return td_errors
 
     @tf.function

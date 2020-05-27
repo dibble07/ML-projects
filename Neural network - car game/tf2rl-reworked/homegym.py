@@ -112,9 +112,6 @@ class CarGameEnv:
 		return self.state
 
 	def step(self, action_in):
-		# reset if finished
-		if self.finished_episode:
-			return self.reset()
 		# calculate movements
 		dist = self.vel*self.time_per_frame
 		drag = self.aero_drag_v2*self.vel**2

@@ -6,11 +6,10 @@ from tf2rl.experiments.trainer import Trainer
 from homegym import CarGameEnv
 
 if __name__ == '__main__':
-    parser = Trainer.get_argument()
-    parser = DDPG.get_argument(parser)
-    parser.set_defaults(batch_size=100)
-    parser.set_defaults(show_test_progress=True)
+    parser = DDPG.get_argument()
+    parser.set_defaults(batch_size=64)
     args = parser.parse_args()
+    print(parser.parse_args())
 
     env = CarGameEnv(True)
     test_env = CarGameEnv(True)
@@ -22,5 +21,5 @@ if __name__ == '__main__':
         max_action=env.action_space.high[0],
         batch_size=args.batch_size,
         n_warmup=args.n_warmup)
-    trainer = Trainer(policy, env, args, test_env=test_env)
+    trainer = Trainer(policy, env, use_prioritized_rb=False, show_test_progress=True, max_steps=1e6, test_interval=1e3)
     trainer()
