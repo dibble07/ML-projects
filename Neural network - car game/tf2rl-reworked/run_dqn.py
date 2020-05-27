@@ -3,24 +3,23 @@ import gym
 from tf2rl.algos.dqn import DQN
 from tf2rl.experiments.trainer import Trainer
 
-from homegym import CarGameEnv, CartPoleEnv
-
+from homegym import CarGameEnv
 
 if __name__ == '__main__':
     parser = Trainer.get_argument()
     parser = DQN.get_argument(parser)
-    parser.set_defaults(test_interval=2000)
     parser.set_defaults(max_steps=100000)
     parser.set_defaults(gpu=-1)
-    parser.set_defaults(n_warmup=500)
     parser.set_defaults(batch_size=32)
     parser.set_defaults(memory_capacity=int(1e4))
+    parser.set_defaults(show_test_progress=True)
     args = parser.parse_args()
+    print(parser.parse_args())
 
-    env = CartPoleEnv()
-    test_env = CartPoleEnv()
-    env = CarGameEnv()
-    test_env = CarGameEnv()
+    env = gym.make("CartPole-v0")
+    test_env = gym.make("CartPole-v0")
+    env = CarGameEnv(False)
+    test_env = CarGameEnv(False)
     policy = DQN(
         enable_double_dqn=args.enable_double_dqn,
         enable_dueling_dqn=args.enable_dueling_dqn,

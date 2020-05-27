@@ -1,7 +1,7 @@
 tf2rl:
-DQN current environment
-SAC continuous evironment
-simplify tf2rl
+understand options
+refine grip useage in environment
+simplify tf2rl - maintinaing DQN/DDPG with options
 
 misc:
 plot text of score in centre
