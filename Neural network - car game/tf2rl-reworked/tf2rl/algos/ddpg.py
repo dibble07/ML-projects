@@ -53,21 +53,7 @@ class Critic(tf.keras.Model):
 
 
 class DDPG(OffPolicyAgent):
-    def __init__(
-            self,
-            state_shape,
-            action_dim,
-            name="DDPG",
-            max_action=1.,
-            lr_actor=0.001,
-            lr_critic=0.001,
-            actor_units=[400, 300],
-            critic_units=[400, 300],
-            sigma=0.1,
-            tau=0.005,
-            n_warmup=int(1e4),
-            memory_capacity=int(1e6),
-            **kwargs):
+    def __init__(self, state_shape, action_dim, name="DDPG", max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[400, 300], critic_units=[400, 300], sigma=0.1, tau=0.005, n_warmup=int(1e4), memory_capacity=int(1e6), **kwargs):
         super().__init__(name=name, memory_capacity=memory_capacity, n_warmup=n_warmup, **kwargs)
 
         # Define and initialize Actor network
@@ -118,11 +104,11 @@ class DDPG(OffPolicyAgent):
         actor_loss, critic_loss, td_errors = self._train_body(
             states, actions, next_states, rewards, done, weights)
 
-        if actor_loss is not None:
-            tf.summary.scalar(name=self.policy_name+"/actor_loss",
-                              data=actor_loss)
-        tf.summary.scalar(name=self.policy_name+"/critic_loss",
-                          data=critic_loss)
+        # if actor_loss is not None:
+        #     tf.summary.scalar(name=self.policy_name+"/actor_loss",
+        #                       data=actor_loss)
+        # tf.summary.scalar(name=self.policy_name+"/critic_loss",
+        #                   data=critic_loss)
 
         return td_errors
 

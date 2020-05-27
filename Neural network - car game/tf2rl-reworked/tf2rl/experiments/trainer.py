@@ -23,8 +23,7 @@ class Trainer:
         n_episode = 0
 
         replay_buffer = get_replay_buffer(
-            self._policy, self._env, self._use_prioritized_rb,
-            self._use_nstep_rb, self._n_step)
+            self._policy, self._env, self._use_prioritized_rb)
 
         obs = self._env.reset()
 
@@ -100,8 +99,6 @@ class Trainer:
             else args.max_steps
         self._n_experiments = args.n_experiments
         self._use_prioritized_rb = args.use_prioritized_rb
-        self._use_nstep_rb = args.use_nstep_rb
-        self._n_step = args.n_step
         # test settings
         self._test_interval = args.test_interval
         self._show_test_progress = args.show_test_progress
@@ -128,8 +125,4 @@ class Trainer:
         # replay buffer
         parser.add_argument('--use-prioritized-rb', action='store_true',
                             help='Flag to use prioritized experience replay')
-        parser.add_argument('--use-nstep-rb', action='store_true',
-                            help='Flag to use nstep experience replay')
-        parser.add_argument('--n-step', type=int, default=4,
-                            help='Number of steps to look over')
         return parser

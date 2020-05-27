@@ -8,13 +8,10 @@ from homegym import CarGameEnv
 if __name__ == '__main__':
     parser = Trainer.get_argument()
     parser = DDPG.get_argument(parser)
-    parser.add_argument('--env-name', type=str, default="Pendulum-v0")
     parser.set_defaults(batch_size=100)
     parser.set_defaults(show_test_progress=True)
     args = parser.parse_args()
 
-    env = gym.make(args.env_name)
-    test_env = gym.make(args.env_name)
     env = CarGameEnv(True)
     test_env = CarGameEnv(True)
     policy = DDPG(

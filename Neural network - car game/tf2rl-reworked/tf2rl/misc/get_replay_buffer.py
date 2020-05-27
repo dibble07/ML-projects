@@ -33,8 +33,7 @@ def get_default_rb_dict(size, env):
             "done": {}}}
 
 
-def get_replay_buffer(policy, env, use_prioritized_rb=False,
-                      use_nstep_rb=False, n_step=1, size=None):
+def get_replay_buffer(policy, env, use_prioritized_rb=False, size=None):
     if policy is None or env is None:
         return None
 
@@ -58,14 +57,6 @@ def get_replay_buffer(policy, env, use_prioritized_rb=False,
             kwargs["env_dict"]["act"]["dtype"] = np.int32
         return ReplayBuffer(**kwargs)
 
-    # N-step prioritized
-    if use_prioritized_rb and use_nstep_rb:
-        kwargs["Nstep"] = {"size": n_step,
-                           "gamma": policy.discount,
-                           "rew": "rew",
-                           "next": "next_obs"}
-        return PrioritizedReplayBuffer(**kwargs)
-
     if len(obs_shape) == 3:
         kwargs["env_dict"]["obs"]["dtype"] = np.ubyte
         kwargs["env_dict"]["next_obs"]["dtype"] = np.ubyte
@@ -73,13 +64,5 @@ def get_replay_buffer(policy, env, use_prioritized_rb=False,
     # prioritized
     if use_prioritized_rb:
         return PrioritizedReplayBuffer(**kwargs)
-
-    # N-step
-    if use_nstep_rb:
-        kwargs["Nstep"] = {"size": n_step,
-                           "gamma": policy.discount,
-                           "rew": "rew",
-                           "next": "next_obs"}
-        return ReplayBuffer(**kwargs)
 
     return ReplayBuffer(**kwargs)
