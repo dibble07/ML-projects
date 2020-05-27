@@ -55,7 +55,6 @@ class DQN(OffPolicyAgent):
             epsilon=0.1,
             epsilon_min=None,
             epsilon_decay_step=int(1e6),
-            n_warmup=int(1e4),
             target_replace_interval=int(5e3),
             memory_capacity=int(1e6),
             optimizer=None,
@@ -63,7 +62,7 @@ class DQN(OffPolicyAgent):
             enable_dueling_dqn=False,
             enable_noisy_dqn=False,
             **kwargs):
-        super().__init__(name=name, memory_capacity=memory_capacity, n_warmup=n_warmup, **kwargs)
+        super().__init__(name=name, memory_capacity=memory_capacity, **kwargs)
 
         q_func = q_func if q_func is not None else QFunc
         # Define and initialize Q-function network
@@ -90,8 +89,7 @@ class DQN(OffPolicyAgent):
             self.epsilon_min = epsilon_min
             self.epsilon_decay_rate = (
                 epsilon - epsilon_min) / epsilon_decay_step
-            self.epsilon = max(epsilon - self.epsilon_decay_rate * self.n_warmup,
-                               self.epsilon_min)
+            self.epsilon = max(epsilon, self.epsilon_min)
         else:
             epsilon = epsilon if not enable_noisy_dqn else 0.
             self.epsilon = epsilon
@@ -147,7 +145,6 @@ class DQN(OffPolicyAgent):
         tf.summary.scalar(name=self.policy_name +
                           "/q_func_Loss", data=q_func_loss)
 
-        # TODO: Remove following by using tf.global_step
         self.n_update += 1
         # Update target networks
         if self.n_update % self.target_replace_interval == 0:
@@ -179,7 +176,6 @@ class DQN(OffPolicyAgent):
             return td_errors, q_func_loss
 
     def compute_td_error(self, states, actions, next_states, rewards, dones):
-        # TODO: fix this ugly conversion
         if isinstance(actions, tf.Tensor):
             actions = tf.expand_dims(actions, axis=1)
             rewards = tf.expand_dims(rewards, axis=1)
@@ -189,7 +185,6 @@ class DQN(OffPolicyAgent):
 
     @tf.function
     def _compute_td_error_body(self, states, actions, next_states, rewards, dones):
-        # TODO: Clean code
         batch_size = states.shape[0]
         not_dones = 1. - tf.cast(dones, dtype=tf.float32)
         actions = tf.cast(actions, dtype=tf.int32)
@@ -203,7 +198,6 @@ class DQN(OffPolicyAgent):
             if self._enable_double_dqn:
                 max_q_indexes = tf.argmax(self.q_func(next_states),
                                           axis=1, output_type=tf.int32)
-                # TODO: Reuse predefined `indices`
                 indices = tf.concat(
                     values=[tf.expand_dims(tf.range(batch_size), axis=1),
                             tf.expand_dims(max_q_indexes, axis=1)], axis=1)
@@ -216,11 +210,3 @@ class DQN(OffPolicyAgent):
             target_Q = tf.stop_gradient(target_Q)
             td_errors = current_Q - target_Q
         return td_errors
-
-    @staticmethod
-    def get_argument(parser=None):
-        parser = OffPolicyAgent.get_argument(parser)
-        parser.add_argument('--enable-double-dqn', action='store_true')
-        parser.add_argument('--enable-dueling-dqn', action='store_true')
-        parser.add_argument('--enable-noisy-dqn', action='store_true')
-        return parser

@@ -1,10 +1,7 @@
 import os
-# import time
-# import argparse
 
 import numpy as np
 import tensorflow as tf
-# from gym.spaces import Box
 
 from tf2rl.misc.get_replay_buffer import get_replay_buffer
 
@@ -22,7 +19,6 @@ class Trainer:
         total_steps = 0
         episode_steps = 0
         episode_return = 0
-        # episode_start_time = time.perf_counter()
         n_episode = 0
 
         replay_buffer = get_replay_buffer(
@@ -48,10 +44,8 @@ class Trainer:
                 obs = self._env.reset()
 
                 n_episode += 1
-                # fps = episode_steps / (time.perf_counter() - episode_start_time)
                 episode_steps = 0
                 episode_return = 0
-                # episode_start_time = time.perf_counter()
 
             if total_steps % self._policy.update_interval == 0:
                 samples = replay_buffer.sample(self._policy.batch_size)
