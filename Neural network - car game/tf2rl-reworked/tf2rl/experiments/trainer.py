@@ -97,7 +97,7 @@ class Trainer:
         self._episode_max_steps = args.episode_max_steps \
             if args.episode_max_steps is not None \
             else args.max_steps
-        self._n_experiments = args.n_experiments
+        # self._n_experiments = args.n_experiments
         self._use_prioritized_rb = args.use_prioritized_rb
         # test settings
         self._test_interval = args.test_interval
@@ -113,8 +113,8 @@ class Trainer:
                             help='Maximum number steps to interact with env.')
         parser.add_argument('--episode-max-steps', type=int, default=int(1e3),
                             help='Maximum steps in an episode')
-        parser.add_argument('--n-experiments', type=int, default=1,
-                            help='Number of experiments')
+        # parser.add_argument('--n-experiments', type=int, default=1,
+        #                     help='Number of experiments')
         # test settings
         parser.add_argument('--test-interval', type=int, default=int(1e3),
                             help='Interval to evaluate trained model')

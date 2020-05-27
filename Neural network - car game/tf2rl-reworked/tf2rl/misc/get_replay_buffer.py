@@ -1,13 +1,10 @@
 import numpy as np
 from gym.spaces.box import Box
 from gym.spaces.discrete import Discrete
-from gym.spaces.dict import Dict
 
 from cpprb import ReplayBuffer, PrioritizedReplayBuffer
 
 from tf2rl.algos.policy_base import OffPolicyAgent
-from tf2rl.envs.utils import is_discrete
-
 
 def get_space_size(space):
     if isinstance(space, Box):
@@ -34,28 +31,11 @@ def get_default_rb_dict(size, env):
 
 
 def get_replay_buffer(policy, env, use_prioritized_rb=False, size=None):
-    if policy is None or env is None:
-        return None
-
     obs_shape = get_space_size(env.observation_space)
     kwargs = get_default_rb_dict(policy.memory_capacity, env)
 
     if size is not None:
         kwargs["size"] = size
-
-    # on-policy policy
-    if not issubclass(type(policy), OffPolicyAgent):
-        kwargs["size"] = policy.horizon
-        kwargs["env_dict"].pop("next_obs")
-        kwargs["env_dict"].pop("rew")
-        # TODO: Remove done. Currently cannot remove because of cpprb implementation
-        # kwargs["env_dict"].pop("done")
-        kwargs["env_dict"]["logp"] = {}
-        kwargs["env_dict"]["ret"] = {}
-        kwargs["env_dict"]["adv"] = {}
-        if is_discrete(env.action_space):
-            kwargs["env_dict"]["act"]["dtype"] = np.int32
-        return ReplayBuffer(**kwargs)
 
     if len(obs_shape) == 3:
         kwargs["env_dict"]["obs"]["dtype"] = np.ubyte
