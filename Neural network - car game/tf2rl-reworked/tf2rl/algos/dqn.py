@@ -60,8 +60,12 @@ class DQN(OffPolicyAgent):
             enable_double_dqn=False,
             enable_dueling_dqn=False,
             enable_noisy_dqn=False,
+            discount=None,
+            memory_capacity=None,
+            batch_size=None,
             **kwargs):
-        super().__init__(name=name, **kwargs)
+        print(kwargs)
+        super().__init__(**kwargs)
 
         q_func = q_func if q_func is not None else QFunc
         # Define and initialize Q-function network
@@ -100,6 +104,11 @@ class DQN(OffPolicyAgent):
         # DQN variants
         self._enable_double_dqn = enable_double_dqn
         self._enable_noisy_dqn = enable_noisy_dqn
+
+        # Oops
+        self.discount=discount
+        self.memory_capacity=memory_capacity
+        self.batch_size=batch_size
 
     def get_action(self, state, test=False, tensor=False):
         if isinstance(state, LazyFrames):
@@ -141,8 +150,8 @@ class DQN(OffPolicyAgent):
         td_errors, q_func_loss = self._train_body(
             states, actions, next_states, rewards, done, weights)
 
-        tf.summary.scalar(name=self.policy_name +
-                          "/q_func_Loss", data=q_func_loss)
+        # tf.summary.scalar(name=self.policy_name +
+        #                   "/q_func_Loss", data=q_func_loss)
 
         self.n_update += 1
         # Update target networks
@@ -151,9 +160,9 @@ class DQN(OffPolicyAgent):
                 self.q_func_target.weights, self.q_func.weights, tau=1.)
 
         # Update exploration rate
-        self.epsilon = max(self.epsilon - self.epsilon_decay_rate * self.update_interval,
-                           self.epsilon_min)
-        tf.summary.scalar(name=self.policy_name+"/epsilon", data=self.epsilon)
+        self.epsilon = max(self.epsilon - self.epsilon_decay_rate, self.epsilon_min)
+        # self.epsilon = max(self.epsilon - self.epsilon_decay_rate * self.update_interval, self.epsilon_min)
+        # tf.summary.scalar(name=self.policy_name+"/epsilon", data=self.epsilon)
 
         return td_errors
 
