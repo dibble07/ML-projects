@@ -1,11 +1,11 @@
 import gym
 
-from tf2rl.algos import DQN, DDPG
-from tf2rl.experiments.trainer import Trainer
+from algos import DQN, DDPG
+from trainer import Trainer
 
 from homegym import CarGameEnv
 
-continuous = False
+continuous = True
 
 env = CarGameEnv(continuous)
 test_env = CarGameEnv(continuous)

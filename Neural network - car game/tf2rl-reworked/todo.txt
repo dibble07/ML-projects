@@ -1,9 +1,8 @@
 tf2rl:
 understand options
 simplify tf2rl - maintinaing DQN/DDPG with options
+	simplify policy initilisation
 	remove default parameters from algos and dependent funs
-	combine algorithm funs and dependencies
-	reduce number of files to import
 	incorporate trainer function
 refine grip useage in environment
 
