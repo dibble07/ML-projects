@@ -12,16 +12,9 @@ def get_space_size(space):
     if isinstance(space, Box):
         return space.shape
     elif isinstance(space, Discrete):
-        return [1, ]  # space.n
-
-def get_default_rb_dict(env):
-    return {
-        "env_dict": {"obs": {"shape": get_space_size(env.observation_space)},"next_obs": {"shape": get_space_size(env.observation_space)},
-            "act": {"shape": get_space_size(env.action_space)},"rew": {},"done": {}}}
-
-
+        return [1, ]  
+        
 def get_replay_buffer(env, use_prioritized_rb, size):
-    # obs_shape = get_space_size(env.observation_space)
     env_dict={
     "obs": {"shape": get_space_size(env.observation_space)},
     "next_obs": {"shape": get_space_size(env.observation_space)},

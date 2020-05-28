@@ -1,7 +1,6 @@
 import gym
 
-from tf2rl.algos.dqn import DQN
-from tf2rl.algos.ddpg import DDPG
+from tf2rl.algos import DQN, DDPG
 from tf2rl.experiments.trainer import Trainer
 
 from homegym import CarGameEnv
