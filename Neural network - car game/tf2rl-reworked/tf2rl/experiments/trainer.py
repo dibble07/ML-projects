@@ -13,33 +13,26 @@ def get_space_size(space):
         return space.shape
     elif isinstance(space, Discrete):
         return [1, ]  # space.n
-    else:
-        raise NotImplementedError("Assuming to use Box or Discrete, not {}".format(type(space)))
-
 
 def get_default_rb_dict(env):
     return {
-        "default_dtype": np.float32,
-        "env_dict": {
-            "obs": {
-                "shape": get_space_size(env.observation_space)},
-            "next_obs": {
-                "shape": get_space_size(env.observation_space)},
-            "act": {
-                "shape": get_space_size(env.action_space)},
-            "rew": {},
-            "done": {}}}
+        "env_dict": {"obs": {"shape": get_space_size(env.observation_space)},"next_obs": {"shape": get_space_size(env.observation_space)},
+            "act": {"shape": get_space_size(env.action_space)},"rew": {},"done": {}}}
 
 
 def get_replay_buffer(env, use_prioritized_rb, size):
-    obs_shape = get_space_size(env.observation_space)
-    kwargs = get_default_rb_dict(env)
-    kwargs["size"] = size
-
+    # obs_shape = get_space_size(env.observation_space)
+    env_dict={
+    "obs": {"shape": get_space_size(env.observation_space)},
+    "next_obs": {"shape": get_space_size(env.observation_space)},
+    "act": {"shape": get_space_size(env.action_space)},
+    "rew": {},
+    "done": {}
+    }
     if use_prioritized_rb:
-        return PrioritizedReplayBuffer(**kwargs)
+        return PrioritizedReplayBuffer(size=size, default_dtype=np.float32,  env_dict=env_dict)
     else:
-        return ReplayBuffer(**kwargs)
+        return ReplayBuffer(size=size, default_dtype=np.float32, env_dict=env_dict)
 
 
 class Trainer:
@@ -85,7 +78,6 @@ class Trainer:
                 episode_steps = 0
                 episode_return = 0
 
-            # if total_steps % self._policy.update_interval == 0:
             samples = replay_buffer.sample(self._batch_size)
             self._policy.train(
                 samples["obs"], samples["act"], samples["next_obs"],
