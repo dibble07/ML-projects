@@ -61,10 +61,7 @@ class DQN(OffPolicyAgent):
             enable_dueling_dqn=False,
             enable_noisy_dqn=False,
             discount=None,
-            memory_capacity=None,
-            batch_size=None,
             **kwargs):
-        print(kwargs)
         super().__init__(**kwargs)
 
         q_func = q_func if q_func is not None else QFunc
@@ -77,10 +74,8 @@ class DQN(OffPolicyAgent):
             "enable_noisy_dqn": enable_noisy_dqn}
         self.q_func = q_func(**kwargs_dqn)
         self.q_func_target = q_func(**kwargs_dqn)
-        self.q_func_optimizer = optimizer if optimizer is not None else \
-            tf.keras.optimizers.Adam(learning_rate=lr)
-        update_target_variables(self.q_func_target.weights,
-                                self.q_func.weights, tau=1.)
+        self.q_func_optimizer = optimizer if optimizer is not None else tf.keras.optimizers.Adam(learning_rate=lr)
+        update_target_variables(self.q_func_target.weights,self.q_func.weights, tau=1.)
 
         self._action_dim = action_dim
         # This is used to check if input state to `get_action` is multiple (batch) or single
@@ -107,8 +102,8 @@ class DQN(OffPolicyAgent):
 
         # Oops
         self.discount=discount
-        self.memory_capacity=memory_capacity
-        self.batch_size=batch_size
+        self.max_grad = 10
+        self.device = "/gpu:0"#"/cpu:0"
 
     def get_action(self, state, test=False, tensor=False):
         if isinstance(state, LazyFrames):

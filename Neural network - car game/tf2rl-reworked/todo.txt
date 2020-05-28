@@ -9,13 +9,13 @@ refine grip useage in environment
 
 misc:
 plot text of score in centre
-visualise memory locations
 add repeated episilon spikes
 
 
 environment features/physics:
 accelerate and corner at the same time limit by grip
 car collisions?
+multiple cars - need to move replay buffer and sampling inside agent
 turning head/sensor array
 
 race car/driver differences:

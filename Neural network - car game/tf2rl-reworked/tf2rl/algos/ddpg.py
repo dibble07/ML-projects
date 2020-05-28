@@ -53,24 +53,20 @@ class Critic(tf.keras.Model):
 
 
 class DDPG(OffPolicyAgent):
-    def __init__(self, state_shape, action_dim, name="DDPG", max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[400, 300], critic_units=[400, 300], sigma=0.1, tau=0.005, discount=None, memory_capacity=None, batch_size=None, **kwargs):
+    def __init__(self, state_shape, action_dim, name="DDPG", max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[400, 300], critic_units=[400, 300], sigma=0.1, tau=0.005, discount=None, **kwargs):
         super().__init__(**kwargs)
 
         # Define and initialize Actor network
         self.actor = Actor(state_shape, action_dim, max_action, actor_units)
-        self.actor_target = Actor(
-            state_shape, action_dim, max_action, actor_units)
+        self.actor_target = Actor(state_shape, action_dim, max_action, actor_units)
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_actor)
-        update_target_variables(self.actor_target.weights,
-                                self.actor.weights, tau=1.)
+        update_target_variables(self.actor_target.weights,self.actor.weights, tau=1.)
 
         # Define and initialize Critic network
         self.critic = Critic(state_shape, action_dim, critic_units)
         self.critic_target = Critic(state_shape, action_dim, critic_units)
-        self.critic_optimizer = tf.keras.optimizers.Adam(
-            learning_rate=lr_critic)
-        update_target_variables(
-            self.critic_target.weights, self.critic.weights, tau=1.)
+        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_critic)
+        update_target_variables(self.critic_target.weights, self.critic.weights, tau=1.)
 
         # Set hyperparameters
         self.sigma = sigma
@@ -78,8 +74,8 @@ class DDPG(OffPolicyAgent):
 
         # Oops
         self.discount=discount
-        self.memory_capacity=memory_capacity
-        self.batch_size=batch_size
+        self.max_grad = 10
+        self.device = "/gpu:0"#"/cpu:0"
 
     def get_action(self, state, test=False, tensor=False):
         is_single_state = len(state.shape) == 1
@@ -99,15 +95,13 @@ class DDPG(OffPolicyAgent):
     def _get_action_body(self, state, sigma, max_action):
         with tf.device(self.device):
             action = self.actor(state)
-            action += tf.random.normal(shape=action.shape,
-                                       mean=0., stddev=sigma, dtype=tf.float32)
+            action += tf.random.normal(shape=action.shape, mean=0., stddev=sigma, dtype=tf.float32)
             return tf.clip_by_value(action, -max_action, max_action)
 
     def train(self, states, actions, next_states, rewards, done, weights=None):
         if weights is None:
             weights = np.ones_like(rewards)
-        actor_loss, critic_loss, td_errors = self._train_body(
-            states, actions, next_states, rewards, done, weights)
+        actor_loss, critic_loss, td_errors = self._train_body(states, actions, next_states, rewards, done, weights)
         return td_errors
 
     @tf.function
@@ -116,13 +110,11 @@ class DDPG(OffPolicyAgent):
             with tf.GradientTape() as tape:
                 td_errors = self._compute_td_error_body(
                     states, actions, next_states, rewards, done)
-                critic_loss = tf.reduce_mean(
-                    huber_loss(td_errors, delta=self.max_grad) * weights)
+                critic_loss = tf.reduce_mean(huber_loss(td_errors, delta=self.max_grad) * weights)
 
             critic_grad = tape.gradient(
                 critic_loss, self.critic.trainable_variables)
-            self.critic_optimizer.apply_gradients(
-                zip(critic_grad, self.critic.trainable_variables))
+            self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
 
             with tf.GradientTape() as tape:
                 next_action = self.actor(states)
@@ -130,14 +122,11 @@ class DDPG(OffPolicyAgent):
 
             actor_grad = tape.gradient(
                 actor_loss, self.actor.trainable_variables)
-            self.actor_optimizer.apply_gradients(
-                zip(actor_grad, self.actor.trainable_variables))
+            self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
             # Update target networks
-            update_target_variables(
-                self.critic_target.weights, self.critic.weights, self.tau)
-            update_target_variables(
-                self.actor_target.weights, self.actor.weights, self.tau)
+            update_target_variables(self.critic_target.weights, self.critic.weights, self.tau)
+            update_target_variables(self.actor_target.weights, self.actor.weights, self.tau)
 
             return actor_loss, critic_loss, td_errors
 

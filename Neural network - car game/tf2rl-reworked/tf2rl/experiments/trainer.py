@@ -43,7 +43,7 @@ def get_replay_buffer(env, use_prioritized_rb, size):
 
 
 class Trainer:
-    def __init__(self, policy, env, use_prioritized_rb, show_test_progress, max_steps, test_interval, memory_capacity):
+    def __init__(self, policy, env, use_prioritized_rb, show_test_progress, max_steps, test_interval, memory_capacity, batch_size):
         self._policy = policy
         self._env = env
         self._test_env = self._env
@@ -52,6 +52,7 @@ class Trainer:
         self._max_steps = max_steps
         self._test_interval = test_interval
         self._memory_capacity = memory_capacity
+        self._batch_size = batch_size
 
     def __call__(self):
         total_steps = 0
@@ -85,7 +86,7 @@ class Trainer:
                 episode_return = 0
 
             # if total_steps % self._policy.update_interval == 0:
-            samples = replay_buffer.sample(self._policy.batch_size)
+            samples = replay_buffer.sample(self._batch_size)
             self._policy.train(
                 samples["obs"], samples["act"], samples["next_obs"],
                 samples["rew"], np.array(samples["done"], dtype=np.float32),
