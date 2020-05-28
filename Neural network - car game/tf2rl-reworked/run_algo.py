@@ -23,7 +23,6 @@ else:
         discount=0.99,
         enable_double_dqn=False,
         enable_dueling_dqn=False,
-        enable_noisy_dqn=False,
         target_replace_interval=300)
 
 trainer = Trainer(

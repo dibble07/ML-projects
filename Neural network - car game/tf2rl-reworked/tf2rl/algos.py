@@ -2,10 +2,45 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
-from tf2rl.networks.noisy_dense import NoisyDense
-from tf2rl.envs.atari_wrapper import LazyFrames
-from tf2rl.misc.target_update_ops import update_target_variables
-from tf2rl.misc.huber_loss import huber_loss
+def update_target_variables(target_variables, source_variables, tau=1.0, use_locking=False, name="update_target_variables"):
+
+    if not isinstance(tau, float):
+        raise TypeError("Tau has wrong type (should be float) {}".format(tau))
+    if not 0.0 < tau <= 1.0:
+        raise ValueError("Invalid parameter tau {}".format(tau))
+    if len(target_variables) != len(source_variables):
+        raise ValueError("Number of target variables {} is not the same as "
+                         "number of source variables {}".format(
+                             len(target_variables), len(source_variables)))
+
+    same_shape = all(trg.get_shape() == src.get_shape()
+                     for trg, src in zip(target_variables, source_variables))
+    if not same_shape:
+        raise ValueError("Target variables don't have the same shape as source "
+                         "variables.")
+
+    def update_op(target_variable, source_variable, tau):
+        if tau == 1.0:
+            return target_variable.assign(source_variable, use_locking)
+        else:
+            return target_variable.assign(
+                tau * source_variable + (1.0 - tau) * target_variable, use_locking)
+
+    update_ops = [update_op(target_var, source_var, tau)
+                  for target_var, source_var
+                  in zip(target_variables, source_variables)]
+    return tf.group(name="update_all_variables", *update_ops)
+
+
+def huber_loss(x, delta=1.):
+    delta = tf.ones_like(x) * delta
+    less_than_max = 0.5 * tf.square(x)
+    greater_than_max = delta * (tf.abs(x) - 0.5 * delta)
+    return tf.where(
+        tf.abs(x) <= delta,
+        x=less_than_max,
+        y=greater_than_max)
+
 
 class Policy(tf.keras.Model):
     def __init__(self):
@@ -18,25 +53,18 @@ class OffPolicyAgent(Policy):
 
 
 class QFunc(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, units=[32, 32],
-                 name="QFunc", enable_dueling_dqn=False,
-                 enable_noisy_dqn=False, n_atoms=51):
+    def __init__(self, state_shape, action_dim, units=[32, 32], name="QFunc", enable_dueling_dqn=False, n_atoms=51):
         super().__init__(name=name)
         self._enable_dueling_dqn = enable_dueling_dqn
-        self._enable_noisy_dqn = enable_noisy_dqn
 
-        DenseLayer = NoisyDense if enable_noisy_dqn else Dense
-
-        self.l1 = DenseLayer(units[0], name="L1", activation="relu")
-        self.l2 = DenseLayer(units[1], name="L2", activation="relu")
-        self.l3 = DenseLayer(action_dim, name="L3", activation="linear")
+        self.l1 = Dense(units[0], name="L1", activation="relu")
+        self.l2 = Dense(units[1], name="L2", activation="relu")
+        self.l3 = Dense(action_dim, name="L3", activation="linear")
 
         if enable_dueling_dqn:
-            self.l4 = DenseLayer(1, name="L3", activation="linear")
+            self.l4 = Dense(1, name="L3", activation="linear")
 
-        # with tf.device("/cpu:0"):
-        self(inputs=tf.constant(np.zeros(shape=(1,)+state_shape,
-                                             dtype=np.float32)))
+        self(inputs=tf.constant(np.zeros(shape=(1,)+state_shape, dtype=np.float32)))
 
     def call(self, inputs):
         features = self.l1(inputs)
@@ -44,8 +72,7 @@ class QFunc(tf.keras.Model):
         if self._enable_dueling_dqn:
             advantages = self.l3(features)
             v_values = self.l4(features)
-            q_values = v_values + \
-                (advantages - tf.reduce_mean(advantages, axis=1, keepdims=True))
+            q_values = v_values + (advantages - tf.reduce_mean(advantages, axis=1, keepdims=True))
         else:
             q_values = self.l3(features)
         return q_values
@@ -67,7 +94,6 @@ class DQN(OffPolicyAgent):
             optimizer=None,
             enable_double_dqn=False,
             enable_dueling_dqn=False,
-            enable_noisy_dqn=False,
             discount=None,
             **kwargs):
         super().__init__(**kwargs)
@@ -78,8 +104,7 @@ class DQN(OffPolicyAgent):
             "state_shape": state_shape,
             "action_dim": action_dim,
             "units": units,
-            "enable_dueling_dqn": enable_dueling_dqn,
-            "enable_noisy_dqn": enable_noisy_dqn}
+            "enable_dueling_dqn": enable_dueling_dqn}
         self.q_func = q_func(**kwargs_dqn)
         self.q_func_target = q_func(**kwargs_dqn)
         self.q_func_optimizer = optimizer if optimizer is not None else tf.keras.optimizers.Adam(learning_rate=lr)
@@ -90,14 +115,13 @@ class DQN(OffPolicyAgent):
         self._state_ndim = np.array(state_shape).shape[0]
 
         # Set hyper-parameters
-        if epsilon_min is not None and not enable_noisy_dqn:
+        if epsilon_min is not None:
             assert epsilon > epsilon_min
             self.epsilon_min = epsilon_min
             self.epsilon_decay_rate = (
                 epsilon - epsilon_min) / epsilon_decay_step
             self.epsilon = max(epsilon, self.epsilon_min)
         else:
-            epsilon = epsilon if not enable_noisy_dqn else 0.
             self.epsilon = epsilon
             self.epsilon_min = epsilon
             self.epsilon_decay_rate = 0.
@@ -106,16 +130,12 @@ class DQN(OffPolicyAgent):
 
         # DQN variants
         self._enable_double_dqn = enable_double_dqn
-        self._enable_noisy_dqn = enable_noisy_dqn
 
         # Oops
         self.discount=discount
         self.max_grad = 10
-        # self.device = "/gpu:0"#"/cpu:0"
 
     def get_action(self, state, test=False, tensor=False):
-        if isinstance(state, LazyFrames):
-            state = np.array(state)
         if not tensor:
             assert isinstance(state, np.ndarray)
         is_single_input = state.ndim == self._state_ndim

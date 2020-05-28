@@ -95,7 +95,7 @@ class CarGameEnv:
 		self.finished_episode = False
 		self.frame_curr = 0
 		self.bear = 0
-		self.vel = 0
+		self.vel = 5
 		self.lap_whole = 0
 		self.lap_float = None
 		self.lap_float_max = self.lap_float
@@ -154,7 +154,7 @@ class CarGameEnv:
 			self.finished_episode = True
 		# update sensing history
 		del self.dist_mem[-1]
-		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]] + self.dist_mem
+		self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]] + self.dist_mem
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
 		return self.state, reward, self.finished_episode, {}
