@@ -5,7 +5,7 @@ from trainer import Trainer
 
 from homegym import CarGameEnv
 
-continuous = True
+continuous = False
 
 env = CarGameEnv(continuous)
 test_env = CarGameEnv(continuous)

@@ -1,8 +1,9 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
+from tensorflow.keras import Input, Model
 
-def update_target_variables(target_variables, source_variables, tau=1.0, use_locking=False):#, name="update_target_variables"
+def update_target_variables(target_variables, source_variables, tau=1.0, use_locking=False):
 
     def update_op(target_variable, source_variable, tau):
         return target_variable.assign(tau * source_variable + (1.0 - tau) * target_variable, use_locking)
@@ -26,6 +27,16 @@ class QFunc(tf.keras.Model):
         super().__init__(name=name)
         self._enable_dueling_dqn = enable_dueling_dqn
 
+        # linputs = Input(shape=state_shape)
+        # l1 = Dense(units[0], name="L1", activation="relu")(linputs)
+        # l2 = Dense(units[1], name="L2", activation="relu")(l1)
+        # l3 = Dense(action_dim, name="L3", activation="linear")(l2)
+        # self.model_q_values_temp = Model(inputs=linputs, outputs=l3)
+
+        # if enable_dueling_dqn:
+        #     l4 = Dense(1, name="L3", activation="linear")(l2)
+        #     self.model_v_values = Model(inputs=linputs, outputs=l4)
+
         self.l1 = Dense(units[0], name="L1", activation="relu")
         self.l2 = Dense(units[1], name="L2", activation="relu")
         self.l3 = Dense(action_dim, name="L3", activation="linear")
@@ -38,12 +49,14 @@ class QFunc(tf.keras.Model):
     def call(self, inputs):
         features = self.l1(inputs)
         features = self.l2(features)
+        q_values_temp = self.l3(features)
+        # q_values_temp_new = tf.convert_to_tensor(self.model_q_values_temp.predict(inputs))
         if self._enable_dueling_dqn:
-            advantages = self.l3(features)
+            advantages = q_values_temp
             v_values = self.l4(features)
             q_values = v_values + (advantages - tf.reduce_mean(advantages, axis=1, keepdims=True))
         else:
-            q_values = self.l3(features)
+            q_values = q_values_temp
         return q_values
 
 
@@ -266,7 +279,6 @@ class DDPG(tf.keras.Model):
 
     @tf.function
     def _get_action_body(self, state, sigma, max_action):
-        # with tf.device(self.device):
         action = self.actor(state)
         action += tf.random.normal(shape=action.shape, mean=0., stddev=sigma, dtype=tf.float32)
         return tf.clip_by_value(action, -max_action, max_action)
@@ -279,14 +291,12 @@ class DDPG(tf.keras.Model):
 
     @tf.function
     def _train_body(self, states, actions, next_states, rewards, done, weights):
-        # with tf.device(self.device):
         with tf.GradientTape() as tape:
             td_errors = self._compute_td_error_body(
                 states, actions, next_states, rewards, done)
             critic_loss = tf.reduce_mean(huber_loss(td_errors, delta=self.max_grad) * weights)
 
-        critic_grad = tape.gradient(
-            critic_loss, self.critic.trainable_variables)
+        critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
         self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
 
         with tf.GradientTape() as tape:
