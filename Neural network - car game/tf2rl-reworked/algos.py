@@ -2,28 +2,10 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
-def update_target_variables(target_variables, source_variables, tau=1.0, use_locking=False, name="update_target_variables"):
-
-    # if not isinstance(tau, float):
-    #     raise TypeError("Tau has wrong type (should be float) {}".format(tau))
-    # if not 0.0 < tau <= 1.0:
-    #     raise ValueError("Invalid parameter tau {}".format(tau))
-    # if len(target_variables) != len(source_variables):
-    #     raise ValueError("Number of target variables {} is not the same as "
-    #                      "number of source variables {}".format(
-    #                          len(target_variables), len(source_variables)))
-
-    # same_shape = all(trg.get_shape() == src.get_shape() for trg, src in zip(target_variables, source_variables))
-    # if not same_shape:
-    #     raise ValueError("Target variables don't have the same shape as source "
-    #                      "variables.")
+def update_target_variables(target_variables, source_variables, tau=1.0, use_locking=False):#, name="update_target_variables"
 
     def update_op(target_variable, source_variable, tau):
-        if tau == 1.0:
-            return target_variable.assign(source_variable, use_locking)
-        else:
-            return target_variable.assign(
-                tau * source_variable + (1.0 - tau) * target_variable, use_locking)
+        return target_variable.assign(tau * source_variable + (1.0 - tau) * target_variable, use_locking)
 
     update_ops = [update_op(target_var, source_var, tau) for target_var, source_var in zip(target_variables, source_variables)]
     return tf.group(name="update_all_variables", *update_ops)
@@ -37,16 +19,6 @@ def huber_loss(x, delta=1.):
         tf.abs(x) <= delta,
         x=less_than_max,
         y=greater_than_max)
-
-
-class Policy(tf.keras.Model):
-    def __init__(self):
-        super().__init__()
-
-
-class OffPolicyAgent(Policy):
-    def __init__(self):
-        super().__init__()
 
 
 class QFunc(tf.keras.Model):
@@ -75,11 +47,11 @@ class QFunc(tf.keras.Model):
         return q_values
 
 
-class DQN(OffPolicyAgent):
+class DQN(tf.keras.Model):
     def __init__(self, state_shape, action_dim, name="DQN", lr=0.001, units=[32, 32], epsilon=0.1,
         epsilon_min=None, epsilon_decay_step=int(1e6), target_replace_interval=int(5e3),
-        enable_double_dqn=False, enable_dueling_dqn=False, discount=None, **kwargs):
-        super().__init__(**kwargs)
+        enable_double_dqn=False, enable_dueling_dqn=False, discount=None):
+        super().__init__()
 
         # Define and initialize Q-function network
         kwargs_dqn = {
@@ -252,7 +224,7 @@ class Critic(tf.keras.Model):
         return features
 
 
-class DDPG(OffPolicyAgent):
+class DDPG(tf.keras.Model):
     def __init__(self, state_shape, action_dim, name="DDPG", max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[400, 300],
         critic_units=[400, 300], sigma=0.1, tau=0.005, discount=None, **kwargs):
         super().__init__(**kwargs)
