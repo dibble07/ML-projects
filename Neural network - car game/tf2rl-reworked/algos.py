@@ -23,19 +23,9 @@ def huber_loss(x, delta=1.):
 
 
 class QFunc(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, units=[32, 32], name="QFunc", enable_dueling_dqn=False):
+    def __init__(self, state_shape, action_dim, units=[16, 8], name="QFunc", enable_dueling_dqn=False):
         super().__init__(name=name)
         self._enable_dueling_dqn = enable_dueling_dqn
-
-        # linputs = Input(shape=state_shape)
-        # l1 = Dense(units[0], name="L1", activation="relu")(linputs)
-        # l2 = Dense(units[1], name="L2", activation="relu")(l1)
-        # l3 = Dense(action_dim, name="L3", activation="linear")(l2)
-        # self.model_q_values_temp = Model(inputs=linputs, outputs=l3)
-
-        # if enable_dueling_dqn:
-        #     l4 = Dense(1, name="L3", activation="linear")(l2)
-        #     self.model_v_values = Model(inputs=linputs, outputs=l4)
 
         self.l1 = Dense(units[0], name="L1", activation="relu")
         self.l2 = Dense(units[1], name="L2", activation="relu")
@@ -50,7 +40,6 @@ class QFunc(tf.keras.Model):
         features = self.l1(inputs)
         features = self.l2(features)
         q_values_temp = self.l3(features)
-        # q_values_temp_new = tf.convert_to_tensor(self.model_q_values_temp.predict(inputs))
         if self._enable_dueling_dqn:
             advantages = q_values_temp
             v_values = self.l4(features)
@@ -61,9 +50,9 @@ class QFunc(tf.keras.Model):
 
 
 class DQN(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, name="DQN", lr=0.001, units=[32, 32], epsilon=0.1,
+    def __init__(self, state_shape, action_dim, name="DQN", lr=0.001, units=[16, 8], epsilon=0.1,
         epsilon_min=None, epsilon_decay_step=int(1e6), target_replace_interval=int(5e3),
-        enable_double_dqn=False, enable_dueling_dqn=False, discount=None):
+        enable_double_dqn=False, enable_dueling_dqn=False, discount=None, load_model=None):
         super().__init__()
 
         # Define and initialize Q-function network
@@ -72,8 +61,12 @@ class DQN(tf.keras.Model):
             "action_dim": action_dim,
             "units": units,
             "enable_dueling_dqn": enable_dueling_dqn}
-        self.q_func = QFunc(**kwargs_dqn)
-        self.q_func_target = QFunc(**kwargs_dqn)
+        if load_model is None:
+            self.q_func = QFunc(**kwargs_dqn)
+            self.q_func_target = QFunc(**kwargs_dqn)
+        else:
+            self.q_func = tf.keras.models.load_model(load_model)
+            self.q_func_target = tf.keras.models.load_model(load_model)
         self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
         update_target_variables(self.q_func_target.weights,self.q_func.weights, tau=1.)
 
@@ -103,6 +96,7 @@ class DQN(tf.keras.Model):
         self.max_grad = 10
 
     def get_action(self, state, test=False, tensor=False):
+
         if not tensor:
             assert isinstance(state, np.ndarray)
         is_single_input = state.ndim == self._state_ndim
@@ -118,8 +112,7 @@ class DQN(tf.keras.Model):
             else:
                 return action
 
-        state = np.expand_dims(state, axis=0).astype(
-            np.float32) if is_single_input else state
+        state = np.expand_dims(state, axis=0).astype(np.float32) if is_single_input else state
         action = self._get_action_body(tf.constant(state))
         if tensor:
             return action
@@ -173,24 +166,16 @@ class DQN(tf.keras.Model):
         batch_size = states.shape[0]
         not_dones = 1. - tf.cast(dones, dtype=tf.float32)
         actions = tf.cast(actions, dtype=tf.int32)
-        indices = tf.concat(
-            values=[tf.expand_dims(tf.range(batch_size), axis=1),
-                    actions], axis=1)
-        current_Q = tf.expand_dims(
-            tf.gather_nd(self.q_func(states), indices), axis=1)
+        indices = tf.concat(values=[tf.expand_dims(tf.range(batch_size), axis=1), actions], axis=1)
+        current_Q = tf.expand_dims(tf.gather_nd(self.q_func(states), indices), axis=1)
 
         if self._enable_double_dqn:
-            max_q_indexes = tf.argmax(self.q_func(next_states),
-                                      axis=1, output_type=tf.int32)
-            indices = tf.concat(
-                values=[tf.expand_dims(tf.range(batch_size), axis=1),
-                        tf.expand_dims(max_q_indexes, axis=1)], axis=1)
-            target_Q = tf.expand_dims(
-                tf.gather_nd(self.q_func_target(next_states), indices), axis=1)
+            max_q_indexes = tf.argmax(self.q_func(next_states),axis=1, output_type=tf.int32)
+            indices = tf.concat(values=[tf.expand_dims(tf.range(batch_size), axis=1),tf.expand_dims(max_q_indexes, axis=1)], axis=1)
+            target_Q = tf.expand_dims(tf.gather_nd(self.q_func_target(next_states), indices), axis=1)
             target_Q = rewards + not_dones * self.discount * target_Q
         else:
-            target_Q = rewards + not_dones * self.discount * tf.reduce_max(
-                self.q_func_target(next_states), keepdims=True, axis=1)
+            target_Q = rewards + not_dones * self.discount * tf.reduce_max(self.q_func_target(next_states), keepdims=True, axis=1)
         target_Q = tf.stop_gradient(target_Q)
         td_errors = current_Q - target_Q
         return td_errors
@@ -261,7 +246,6 @@ class DDPG(tf.keras.Model):
         # Oops
         self.discount=discount
         self.max_grad = 10
-        # self.device = "/gpu:0"#"/cpu:0"
 
     def get_action(self, state, test=False, tensor=False):
         is_single_state = len(state.shape) == 1
@@ -292,8 +276,7 @@ class DDPG(tf.keras.Model):
     @tf.function
     def _train_body(self, states, actions, next_states, rewards, done, weights):
         with tf.GradientTape() as tape:
-            td_errors = self._compute_td_error_body(
-                states, actions, next_states, rewards, done)
+            td_errors = self._compute_td_error_body(states, actions, next_states, rewards, done)
             critic_loss = tf.reduce_mean(huber_loss(td_errors, delta=self.max_grad) * weights)
 
         critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
@@ -303,8 +286,7 @@ class DDPG(tf.keras.Model):
             next_action = self.actor(states)
             actor_loss = -tf.reduce_mean(self.critic([states, next_action]))
 
-        actor_grad = tape.gradient(
-            actor_loss, self.actor.trainable_variables)
+        actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
         self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
         # Update target networks
@@ -323,7 +305,6 @@ class DDPG(tf.keras.Model):
 
     @tf.function
     def _compute_td_error_body(self, states, actions, next_states, rewards, dones):
-        # with tf.device(self.device):
         not_dones = 1. - dones
         target_Q = self.critic_target(
             [next_states, self.actor_target(next_states)])
