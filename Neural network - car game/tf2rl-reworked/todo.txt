@@ -1,15 +1,11 @@
-tf2rl:
-understand options
-simplify tf2rl - maintinaing DQN/DDPG with options
-	simplify policy initilisation
-	remove default parameters from algos and dependent funs
-	incorporate trainer function
+incorporate all functionality of old model
+"If using Keras pass *_constraint arguments to layers."
+remove default parameters from algos and simplify
 refine grip useage in environment
 
 misc:
 plot text of score in centre
 add repeated episilon spikes
-
 
 environment features/physics:
 accelerate and corner at the same time limit by grip

@@ -35,8 +35,6 @@ class QFunc(tf.keras.Model):
         if enable_dueling_dqn:
             self.l4 = Dense(1, name="L3", activation="linear")
         
-        self(inputs=tf.constant(np.zeros(shape=(1,)+state_shape, dtype=np.float32)))
-
     def call(self, inputs):
         features = self.l1(inputs)
         features = self.l2(features)
@@ -63,8 +61,12 @@ class DQN(tf.keras.Model):
             "units": units,
             "enable_dueling_dqn": enable_dueling_dqn,
             "load_model": load_model}
-        self.q_func = QFunc(**kwargs_dqn)
-        self.q_func_target = QFunc(**kwargs_dqn)
+        if load_model is None:
+            self.q_func = QFunc(**kwargs_dqn)
+            self.q_func_target = QFunc(**kwargs_dqn)
+        else:
+            self.q_func = tf.keras.models.load_model(f"{load_model}_q_func")
+            self.q_func_target = tf.keras.models.load_model(f"{load_model}_q_func")
         self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
         update_target_variables(self.q_func_target.weights,self.q_func.weights, tau=1.)
 
@@ -178,44 +180,36 @@ class DQN(tf.keras.Model):
         td_errors = current_Q - target_Q
         return td_errors
 
-    def save_model(self):
-        print("I wish I could save")
+    def save_agent(self):
+        self.q_func.save("best_q_func")
 
 
 class Actor(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, max_action, units=[32, 32], name="Actor"):
+    def __init__(self, state_shape, action_dim, units=[32, 32], name="Actor"):
         super().__init__(name=name)
+        self.l1 = Dense(units[0], name="L1", activation="relu")
+        self.l2 = Dense(units[1], name="L2", activation="relu")
+        self.l3 = Dense(action_dim, name="L3", activation="tanh")
 
-        self.l1 = Dense(units[0], name="L1")
-        self.l2 = Dense(units[1], name="L2")
-        self.l3 = Dense(action_dim, name="L3")
-
-        # self(tf.constant(np.zeros(shape=(1,)+state_shape, dtype=np.float32)))
-
-    def call(self, inputs, max_action):
-        features = tf.nn.relu(self.l1(inputs))
-        features = tf.nn.relu(self.l2(features))
-        action = tf.nn.tanh(self.l3(features)) * max_action
+    def call(self, inputs):
+        features = self.l1(inputs)
+        features = self.l2(features)
+        action = self.l3(features)
         return action
 
 
 class Critic(tf.keras.Model):
     def __init__(self, state_shape, action_dim, units=[32, 32], name="Critic"):
         super().__init__(name=name)
-
-        self.l1 = Dense(units[0], name="L1")
-        self.l2 = Dense(units[1], name="L2")
-        self.l3 = Dense(1, name="L3")
-
-        # dummy_state = tf.constant(np.zeros(shape=(1,)+state_shape, dtype=np.float32))
-        # dummy_action = tf.constant(np.zeros(shape=[1, action_dim], dtype=np.float32))
-        # self([dummy_state, dummy_action])
+        self.l1 = Dense(units[0], name="L1", activation="relu")
+        self.l2 = Dense(units[1], name="L2", activation="relu")
+        self.l3 = Dense(1, name="L3", activation="linear")
 
     def call(self, inputs):
         states, actions = inputs
         features = tf.concat([states, actions], axis=1)
-        features = tf.nn.relu(self.l1(features))
-        features = tf.nn.relu(self.l2(features))
+        features = self.l1(features)
+        features = self.l2(features)
         features = self.l3(features)
         return features
 
@@ -226,14 +220,24 @@ class DDPG(tf.keras.Model):
         super().__init__()
 
         # Define and initialize Actor network
-        self.actor = Actor(state_shape, action_dim, actor_units)
-        self.actor_target = Actor(state_shape, action_dim, actor_units)
+        if load_model is None:
+            self.actor = Actor(state_shape, action_dim, actor_units)
+            self.actor_target = Actor(state_shape, action_dim, actor_units)
+        else:
+            self.actor = tf.keras.models.load_model(f"{load_model}_actor")
+            self.actor_target = tf.keras.models.load_model(f"{load_model}_actor")
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_actor)
         update_target_variables(self.actor_target.weights,self.actor.weights, tau=1.)
 
         # Define and initialize Critic network
-        self.critic = Critic(state_shape, action_dim, critic_units)
-        self.critic_target = Critic(state_shape, action_dim, critic_units)
+        if load_model is None:
+            self.critic = Critic(state_shape, action_dim, critic_units)
+            self.critic_target = Critic(state_shape, action_dim, critic_units)
+        else:
+            self.critic = tf.keras.models.load_model(f"{load_model}_critic")
+            self.critic_target = tf.keras.models.load_model(f"{load_model}_critic")
+        
+
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_critic)
         update_target_variables(self.critic_target.weights, self.critic.weights, tau=1.)
 
@@ -262,7 +266,7 @@ class DDPG(tf.keras.Model):
 
     @tf.function
     def _get_action_body(self, state, sigma, max_action):
-        action = self.actor(state, max_action)
+        action = self.actor(state)*max_action
         action += tf.random.normal(shape=action.shape, mean=0., stddev=sigma, dtype=tf.float32)
         return tf.clip_by_value(action, -max_action, max_action)
 
@@ -282,7 +286,7 @@ class DDPG(tf.keras.Model):
         self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))
 
         with tf.GradientTape() as tape:
-            next_action = self.actor(states, self.max_action)
+            next_action = self.actor(states)*self.max_action
             actor_loss = -tf.reduce_mean(self.critic([states, next_action]))
 
         actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
@@ -305,12 +309,13 @@ class DDPG(tf.keras.Model):
     @tf.function
     def _compute_td_error_body(self, states, actions, next_states, rewards, dones):
         not_dones = 1. - dones
-        target_Q = self.critic_target([next_states, self.actor_target(next_states, self.max_action)])
+        target_Q = self.critic_target([next_states, self.actor_target(next_states)*self.max_action])
         target_Q = rewards + (not_dones * self.discount * target_Q)
         target_Q = tf.stop_gradient(target_Q)
         current_Q = self.critic([states, actions])
         td_errors = target_Q - current_Q
         return td_errors
 
-    def save_model(self):
-        print("I wish I could save")
+    def save_agent(self):
+        self.actor.save("best_actor")
+        self.critic.save("best_critic")

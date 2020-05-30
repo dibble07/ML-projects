@@ -25,7 +25,7 @@ def evaluate_policy():
     return episode_return
 
 # Define variables
-continuous = True
+continuous = False
 use_prioritized_rb=False
 show_test_progress=True
 max_steps=1_000_000
@@ -41,7 +41,8 @@ if continuous:
         state_shape=env.observation_space.shape,
         action_dim=env.action_space.high.size,
         discount=0.99,
-        max_action=env.action_space.high[0]
+        max_action=env.action_space.high[0],
+        load_model="best"
         )
 else:
     agent = DQN(
@@ -50,7 +51,8 @@ else:
         discount=0.99,
         enable_double_dqn=True,
         enable_dueling_dqn=True,
-        target_replace_interval=300
+        target_replace_interval=300,
+        load_model="best"
         )
 obs_space_shape = env.observation_space.shape
 act_space_shape = env.action_space.shape if continuous else [1, ]
@@ -92,10 +94,11 @@ for total_steps in range(max_steps):
         replay_buffer.update_priorities(samples["indexes"], np.abs(td_error) + 1e-6)
 
     # evaluate performance
-    if total_steps == 0 or total_steps % test_interval == 0:
+    if (total_steps == 0) or (total_steps % test_interval == 0):
         avg_test_return = evaluate_policy()
         save_flag=False
         print("Evaluation Total Steps: {0: 7} Average Reward {1: 5.4f}".format(total_steps, avg_test_return))
         if best_score is None or avg_test_return>best_score:
-            agent.save_model()
+            print(f"{best_score:.3f}, {avg_test_return:.3f}")
+            agent.save_agent()
             best_score=avg_test_return
