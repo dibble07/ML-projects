@@ -54,6 +54,11 @@ class DQN(tf.keras.Model):
         enable_double_dqn=False, enable_dueling_dqn=False, discount=None, load_model=None):
         super().__init__()
 
+        # Oops
+        self.discount=discount
+        self.max_grad = 10
+        self.name = name
+
         # Define and initialize Q-function network
         kwargs_dqn = {
             "state_shape": state_shape,
@@ -65,8 +70,8 @@ class DQN(tf.keras.Model):
             self.q_func = QFunc(**kwargs_dqn)
             self.q_func_target = QFunc(**kwargs_dqn)
         else:
-            self.q_func = tf.keras.models.load_model(f"{load_model}_q_func")
-            self.q_func_target = tf.keras.models.load_model(f"{load_model}_q_func")
+            self.q_func = tf.keras.models.load_model(f"{self.name}_{load_model}_q_func")
+            self.q_func_target = tf.keras.models.load_model(f"{self.name}_{load_model}_q_func")
         self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
         update_target_variables(self.q_func_target.weights,self.q_func.weights, tau=1.)
 
@@ -90,10 +95,6 @@ class DQN(tf.keras.Model):
 
         # DQN variants
         self._enable_double_dqn = enable_double_dqn
-
-        # Oops
-        self.discount=discount
-        self.max_grad = 10
 
     def get_action(self, state, test=False, tensor=False):
 
@@ -180,8 +181,8 @@ class DQN(tf.keras.Model):
         td_errors = current_Q - target_Q
         return td_errors
 
-    def save_agent(self):
-        self.q_func.save("best_q_func")
+    def save_agent(self, filename):
+        self.q_func.save(f"{self.name}_{filename}")
 
 
 class Actor(tf.keras.Model):
@@ -224,8 +225,8 @@ class DDPG(tf.keras.Model):
             self.actor = Actor(state_shape, action_dim, actor_units)
             self.actor_target = Actor(state_shape, action_dim, actor_units)
         else:
-            self.actor = tf.keras.models.load_model(f"{load_model}_actor")
-            self.actor_target = tf.keras.models.load_model(f"{load_model}_actor")
+            self.actor = tf.keras.models.load_model(f"{self.name}_{load_model}/actor")
+            self.actor_target = tf.keras.models.load_model(f"{self.name}_{load_model}/actor")
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_actor)
         update_target_variables(self.actor_target.weights,self.actor.weights, tau=1.)
 
@@ -234,8 +235,8 @@ class DDPG(tf.keras.Model):
             self.critic = Critic(state_shape, action_dim, critic_units)
             self.critic_target = Critic(state_shape, action_dim, critic_units)
         else:
-            self.critic = tf.keras.models.load_model(f"{load_model}_critic")
-            self.critic_target = tf.keras.models.load_model(f"{load_model}_critic")
+            self.critic = tf.keras.models.load_model(f"{self.name}_{load_model}/critic")
+            self.critic_target = tf.keras.models.load_model(f"{self.name}_{load_model}/critic")
         
 
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_critic)
@@ -316,6 +317,6 @@ class DDPG(tf.keras.Model):
         td_errors = target_Q - current_Q
         return td_errors
 
-    def save_agent(self):
-        self.actor.save("best_actor")
-        self.critic.save("best_critic")
+    def save_agent(self, filename):
+        self.actor.save(f"{self.name}_{filename}/actor")
+        self.critic.save(f"{self.name}_{filename}/critic")

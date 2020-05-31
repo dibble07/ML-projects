@@ -1,34 +1,39 @@
 # Import libraries
-import os
-
-import numpy as np
-import tensorflow as tf
+from cpprb import ReplayBuffer, PrioritizedReplayBuffer
+from datetime import datetime
 from gym.spaces.box import Box
 from gym.spaces.discrete import Discrete
-from cpprb import ReplayBuffer, PrioritizedReplayBuffer
+import imageio
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+from matplotlib import style
+style.use("ggplot")
+import numpy as np
+import os
+import tensorflow as tf
 
 from algos import DQN, DDPG
 from homegym import CarGameEnv
 
 # Define user functions
 def evaluate_policy():
-    episode_return = 0.
+    render_frames=[]
     obs = test_env.reset()
     done = False
     while not done:
         action = agent.get_action(obs, test=True)
-        next_obs, reward, done, _ = test_env.step(action)
+        next_obs, _, done, _ = test_env.step(action)
         if show_test_progress:
-            test_env.render()
-        episode_return += reward
+            render_frames.append(test_env.render())
         obs = next_obs
-    return episode_return
+    return test_env.lap_float, test_env.frame_curr, render_frames
 
 # Define variables
-continuous = False
+continuous = True
 use_prioritized_rb=False
 show_test_progress=True
-max_steps=1_000_000
+max_steps=20_000
 test_interval=1_000
 memory_capacity=1_000_000
 batch_size=64
@@ -42,7 +47,7 @@ if continuous:
         action_dim=env.action_space.high.size,
         discount=0.99,
         max_action=env.action_space.high[0],
-        load_model="best"
+        load_model=None
         )
 else:
     agent = DQN(
@@ -52,7 +57,7 @@ else:
         enable_double_dqn=True,
         enable_dueling_dqn=True,
         target_replace_interval=300,
-        load_model="best"
+        load_model=None
         )
 obs_space_shape = env.observation_space.shape
 act_space_shape = env.action_space.shape if continuous else [1, ]
@@ -69,7 +74,8 @@ else:
     replay_buffer = ReplayBuffer(size=memory_capacity, default_dtype=np.float32, env_dict=env_dict)
 
 # Train agent
-best_score = None
+incumbent_lap_float, incumbent_frame_count = None, None
+evaluation_steps, evaluation_lap_float, evaluation_frame_count = [], [], []
 obs = env.reset()
 for total_steps in range(max_steps):
 
@@ -95,10 +101,41 @@ for total_steps in range(max_steps):
 
     # evaluate performance
     if (total_steps == 0) or (total_steps % test_interval == 0):
-        avg_test_return = evaluate_policy()
-        save_flag=False
-        print("Evaluation Total Steps: {0: 7} Average Reward {1: 5.4f}".format(total_steps, avg_test_return))
-        if best_score is None or avg_test_return>best_score:
-            print(f"{best_score:.3f}, {avg_test_return:.3f}")
-            agent.save_agent()
-            best_score=avg_test_return
+        episode_lap_float, episode_frame_count, episode_render = evaluate_policy()
+        evaluation_lap_float.append(episode_lap_float)
+        evaluation_frame_count.append(episode_frame_count)
+        evaluation_steps.append(total_steps)
+        date_str = f"{datetime.now():%H-%M-%S}"
+        filename = f"{date_str}_{episode_lap_float:.2f}_{episode_frame_count:3}"
+        print_str = f"{date_str}: Steps={total_steps: 7}, Laps={episode_lap_float:.2f}, Frames={episode_frame_count:3}"
+        save_best = False
+        if incumbent_lap_float == None or incumbent_frame_count == None:
+            save_best = True
+        elif episode_lap_float > incumbent_lap_float or (episode_lap_float == incumbent_lap_float and episode_frame_count < incumbent_frame_count):
+            save_best = True
+        if save_best:
+            print(print_str + " saved")
+            incumbent_lap_float, incumbent_frame_count = episode_lap_float, episode_frame_count
+            agent.save_agent(filename)
+            if len(episode_render) > 0:
+                with imageio.get_writer(filename + ".mp4", fps=30) as video:
+                    for frame in episode_render:
+                        video.append_data(frame)
+        else:
+            print(print_str)
+
+# Visualise results
+print("All episodes done")
+fig, ax1 = plt.subplots()
+ax1.set_xlabel("Episode")
+color = 'tab:red'
+ax1.plot(evaluation_steps, evaluation_lap_float/evaluation_frame_count, color=color)
+ax1.set_ylabel("Speed [laps/frame]", color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+ax2 = ax1.twinx()
+color = 'tab:blue'
+ax2.plot(evaluation_steps, evaluation_lap_float, color=color)
+ax2.set_ylabel(f"Laps", color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+fig.tight_layout()
+plt.show()
