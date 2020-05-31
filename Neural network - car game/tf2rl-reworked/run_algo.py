@@ -30,12 +30,12 @@ def evaluate_policy():
     return test_env.lap_float, test_env.frame_curr, render_frames
 
 # Define variables
-continuous = True
-use_prioritized_rb=False
+continuous = False
+use_prioritized_rb=True
 show_test_progress=True
-max_steps=20_000
-test_interval=1_000
-memory_capacity=1_000_000
+max_steps=30_000
+test_interval=500
+memory_capacity=100_000
 batch_size=64
 
 # Initialise environment, policy and replay buffer
@@ -129,7 +129,7 @@ print("All episodes done")
 fig, ax1 = plt.subplots()
 ax1.set_xlabel("Episode")
 color = 'tab:red'
-ax1.plot(evaluation_steps, evaluation_lap_float/evaluation_frame_count, color=color)
+ax1.plot(evaluation_steps, [x/y for x,y in zip(evaluation_lap_float,evaluation_frame_count)] , color=color)
 ax1.set_ylabel("Speed [laps/frame]", color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 ax2 = ax1.twinx()

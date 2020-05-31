@@ -1,5 +1,5 @@
 tanh to clamped
-refine grip useage in environment
+compare discrete vs continuous - add memory and more sensing
 reduce warnings
 remove default parameters from algos and simplify
 incorporate epsilon function/decay

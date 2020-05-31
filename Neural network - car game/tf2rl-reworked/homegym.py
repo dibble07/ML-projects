@@ -59,7 +59,7 @@ class CarGameEnv:
 		self.vel_max = (self.forward_force/self.aero_drag_v2)**0.5
 		# self.r_turn_min = 30
 		self.wheelbase = 3.7
-		self.steer_ang_max = atan(self.wheelbase/30)
+		self.steer_lock_ang = atan(self.wheelbase/30)
 		self.friction_coeff = 1.6
 		self.time_per_frame = 0.2
 		self.sz = (16, 32)
@@ -79,16 +79,15 @@ class CarGameEnv:
 		self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 		self.continuous = continuous_flag
 		if self.continuous:
-			print("Not accounting for grip here")
 			if self.sense_ang.size > 1:
 				self.action_space = spaces.Box(-1, +1, (2,), dtype=np.float32)
 			else:
 				self.action_space = spaces.Box(-1, +1, (1,), dtype=np.float32)
 		else:
 			if self.sense_ang.size > 1:
-				self.actions_avail = ["accelerate" , "decelerate", "maintain", "left", "right"]
+				self.actions_avail = [(1,0) , (-1,0), (0,0), (0,-1), (0,1)]
 			else:
-				self.actions_avail = ["accelerate" , "decelerate", "maintain"]
+				self.actions_avail = [(1,) , (-1,), (0,)]
 			self.action_space = spaces.Discrete(len(self.actions_avail))
 
 	def reset(self):
@@ -115,35 +114,37 @@ class CarGameEnv:
 		# calculate movements
 		dist = self.vel*self.time_per_frame
 		drag = self.aero_drag_v2*self.vel**2
-		grip = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
-		r_turn_grip = self.mass*self.vel**2/grip
+		total_grip_avail = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
 		rotation = None
 		if self.continuous:
 			if len(action_in)==1:
 				act_for_aft, act_steer = action_in[0], 0
 			else:
 				act_for_aft, act_steer = action_in
-			for_aft_force_max = self.forward_force if act_for_aft >= 0 else -grip
-			for_aft_force = abs(act_for_aft)*for_aft_force_max
-			self.vel = max(0,self.vel+(for_aft_force - drag)/self.mass*self.time_per_frame)
-			if act_steer != 0:
-				rot_sign = np.sign(act_steer)
-				steer_ang_chosen = abs(act_steer)*self.steer_ang_max
-				steer_ang = steer_ang_chosen
-				rotation = (rot_sign, steer_ang)
 		else:
 			action = self.actions_avail[action_in]
-			if action == "accelerate":
-				self.vel = max(0.0,self.vel+(min(grip, self.forward_force) - drag)/self.mass*self.time_per_frame)
-			elif action == "decelerate":
-				self.vel = max(0.0,self.vel+(-grip-drag)/self.mass*self.time_per_frame)
-			elif action in ["left","right"]:
-				rot_sign = 1 if action == "right" else -1
-				if r_turn_grip > 0:
-					steer_ang = min(self.steer_ang_max, atan(self.wheelbase/r_turn_grip))
-				else:
-					steer_ang = self.steer_ang_max
+			if len(action)==1:
+				act_for_aft, act_steer = action[0], 0
+			else:
+				act_for_aft, act_steer = action
+		long_force_max = min(self.forward_force, total_grip_avail) if act_for_aft >= 0 else -total_grip_avail
+		long_force = abs(act_for_aft)*long_force_max
+		self.vel = max(0,self.vel+(long_force - drag)/self.mass*self.time_per_frame)
+		turn_grip_avail = (total_grip_avail**2-long_force**2)**0.5
+		if act_steer != 0:
+			rot_sign = np.sign(act_steer)
+			r_turn_grip = self.mass*self.vel**2/turn_grip_avail
+			if r_turn_grip == 0:
+				steer_ang_grip = np.inf
+			elif np.isinf(r_turn_grip):
+				steer_ang_grip = 0
+			else:
+				steer_ang_grip = atan(self.wheelbase/r_turn_grip)
+			steer_ang_max = min(self.steer_lock_ang, steer_ang_grip)
+			steer_ang = abs(act_steer)*steer_ang_max
+			if steer_ang != 0:
 				rotation = (rot_sign, steer_ang)
+
 		# implement movements and update scores and statuses
 		self.move(dist, rotation)
 		self.frame_curr +=1
