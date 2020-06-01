@@ -57,7 +57,6 @@ class CarGameEnv:
 		self.aero_down_v2 = self.aero_drag_v2*2.5
 		self.forward_force = 8000
 		self.vel_max = (self.forward_force/self.aero_drag_v2)**0.5
-		# self.r_turn_min = 30
 		self.wheelbase = 3.7
 		self.steer_lock_ang = atan(self.wheelbase/30)
 		self.friction_coeff = 1.6

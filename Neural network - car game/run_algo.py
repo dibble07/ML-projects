@@ -30,7 +30,7 @@ def evaluate_policy():
     return test_env.lap_float, test_env.frame_curr, render_frames
 
 # Define variables
-continuous = False
+continuous = True
 use_prioritized_rb=True
 show_test_progress=True
 max_steps=30_000

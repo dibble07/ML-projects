@@ -23,7 +23,7 @@ def huber_loss(x, delta=1.):
 
 
 class QFunc(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, units=[16, 8], name="QFunc", enable_dueling_dqn=False, load_model=None):
+    def __init__(self, state_shape, action_dim, units=[16, 8], name="QFunc", enable_dueling_dqn=False):
 
         super().__init__(name=name)
         self._enable_dueling_dqn = enable_dueling_dqn
@@ -63,14 +63,13 @@ class DQN(tf.keras.Model):
             "state_shape": state_shape,
             "action_dim": action_dim,
             "units": units,
-            "enable_dueling_dqn": enable_dueling_dqn,
-            "load_model": load_model}
+            "enable_dueling_dqn": enable_dueling_dqn}
         if load_model is None:
             self.q_func = QFunc(**kwargs_dqn)
             self.q_func_target = QFunc(**kwargs_dqn)
         else:
-            self.q_func = tf.keras.models.load_model(f"DQN_{load_model}_q_func")
-            self.q_func_target = tf.keras.models.load_model(f"DQN_{load_model}_q_func")
+            self.q_func = tf.keras.models.load_model(f"DQN_{load_model}")
+            self.q_func_target = tf.keras.models.load_model(f"DQN_{load_model}")
         self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
         update_target_variables(self.q_func_target.weights,self.q_func.weights, tau=1.)
 
@@ -215,8 +214,8 @@ class Critic(tf.keras.Model):
 
 
 class DDPG(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[400, 300],
-        critic_units=[400, 300], sigma=0.1, tau=0.005, discount=None, load_model=None):
+    def __init__(self, state_shape, action_dim, max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[16, 8],
+        critic_units=[16, 8], sigma=0.1, tau=0.005, discount=None, load_model=None):
         super().__init__()
 
         # Define and initialize Actor network
