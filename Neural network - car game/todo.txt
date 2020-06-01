@@ -1,4 +1,5 @@
 tanh to clamped
+recreate weights initialiser
 compare discrete vs continuous - add memory and more sensing
 reduce warnings
 remove default parameters from algos and simplify
