@@ -33,7 +33,7 @@ def evaluate_policy():
 continuous = True
 use_prioritized_rb=True
 show_test_progress=True
-max_steps=30_000
+max_steps=250_000
 test_interval=500
 memory_capacity=100_000
 batch_size=64
@@ -46,18 +46,26 @@ if continuous:
         state_shape=env.observation_space.shape,
         action_dim=env.action_space.high.size,
         discount=0.99,
-        max_action=env.action_space.high[0],
-        load_model=None
+        load_model=None,
+        actor_units=[64, 32],
+        critic_units=[64, 32],
+        sigma=0.1,
+        tau=0.005,
+        max_action=env.action_space.high[0]
         )
 else:
     agent = DQN(
         state_shape=env.observation_space.shape,
         action_dim=env.action_space.n,
         discount=0.99,
-        enable_double_dqn=True,
+        load_model=None,
+        units=[16, 8],
         enable_dueling_dqn=True,
         target_replace_interval=300,
-        load_model=None
+        epsilon_init_step = 100_000,
+        epsilon_init = 0.1,
+        epsilon_final = 0.01,
+        epsilon_decay = 0.0001
         )
 obs_space_shape = env.observation_space.shape
 act_space_shape = env.action_space.shape if continuous else [1, ]
@@ -80,7 +88,7 @@ obs = env.reset()
 for total_steps in range(max_steps):
 
     # take and store action
-    action = agent.get_action(obs)
+    action = agent.get_action(obs, test=False)
     next_obs, reward, done, _ = env.step(action)
     replay_buffer.add(obs=obs, act=action, next_obs=next_obs, rew=reward, done=done)
     obs = next_obs
@@ -129,8 +137,8 @@ print("All episodes done")
 fig, ax1 = plt.subplots()
 ax1.set_xlabel("Episode")
 color = 'tab:red'
-ax1.plot(evaluation_steps, [x/y for x,y in zip(evaluation_lap_float,evaluation_frame_count)] , color=color)
-ax1.set_ylabel("Speed [laps/frame]", color=color)
+ax1.plot(evaluation_steps, [x*env.lap_length/(y*env.time_per_frame) for x,y in zip(evaluation_lap_float,evaluation_frame_count)] , color=color)
+ax1.set_ylabel("Speed [m/s]", color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 ax2 = ax1.twinx()
 color = 'tab:blue'

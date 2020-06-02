@@ -23,9 +23,9 @@ def huber_loss(x, delta=1.):
 
 
 class QFunc(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, units=[16, 8], name="QFunc", enable_dueling_dqn=False):
+    def __init__(self, action_dim, units, enable_dueling_dqn=False):
 
-        super().__init__(name=name)
+        super().__init__()
         self._enable_dueling_dqn = enable_dueling_dqn
 
         self.l1 = Dense(units[0], name="L1", activation="relu")
@@ -49,84 +49,57 @@ class QFunc(tf.keras.Model):
 
 
 class DQN(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, lr=0.001, units=[16, 8], epsilon=0.1,
-        epsilon_min=None, epsilon_decay_step=int(1e6), target_replace_interval=int(5e3),
-        enable_double_dqn=False, enable_dueling_dqn=False, discount=None, load_model=None):
+    def __init__(self, state_shape, action_dim, units, target_replace_interval, enable_dueling_dqn,
+    discount, load_model, epsilon_init_step, epsilon_init, epsilon_final, epsilon_decay):
         super().__init__()
 
-        # Oops
+        # Assign variables
+        self.epsilon_init_step = epsilon_init_step
+        self.epsilon_init = epsilon_init
+        self.epsilon_final = epsilon_final
+        self.epsilon_decay = epsilon_decay
         self.discount=discount
         self.max_grad = 10
+        self._action_dim = action_dim
+        self._state_ndim = np.array(state_shape).shape[0]
+        self.target_replace_interval = target_replace_interval
+        self.n_update = 0
 
         # Define and initialize Q-function network
-        kwargs_dqn = {
-            "state_shape": state_shape,
-            "action_dim": action_dim,
-            "units": units,
-            "enable_dueling_dqn": enable_dueling_dqn}
+        kwargs_dqn = {"action_dim": action_dim, "units": units, "enable_dueling_dqn": enable_dueling_dqn}
         if load_model is None:
             self.q_func = QFunc(**kwargs_dqn)
             self.q_func_target = QFunc(**kwargs_dqn)
         else:
             self.q_func = tf.keras.models.load_model(f"DQN_{load_model}")
             self.q_func_target = tf.keras.models.load_model(f"DQN_{load_model}")
-        self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
+        self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         update_target_variables(self.q_func_target.weights,self.q_func.weights, tau=1.)
 
-        self._action_dim = action_dim
-        # This is used to check if input state to `get_action` is multiple (batch) or single
-        self._state_ndim = np.array(state_shape).shape[0]
+    def get_action(self, state, test):
 
-        # Set hyper-parameters
-        if epsilon_min is not None:
-            assert epsilon > epsilon_min
-            self.epsilon_min = epsilon_min
-            self.epsilon_decay_rate = (
-                epsilon - epsilon_min) / epsilon_decay_step
-            self.epsilon = max(epsilon, self.epsilon_min)
-        else:
-            self.epsilon = epsilon
-            self.epsilon_min = epsilon
-            self.epsilon_decay_rate = 0.
-        self.target_replace_interval = target_replace_interval
-        self.n_update = 0
-
-        # DQN variants
-        self._enable_double_dqn = enable_double_dqn
-
-    def get_action(self, state, test=False, tensor=False):
-
-        if not tensor:
-            assert isinstance(state, np.ndarray)
         is_single_input = state.ndim == self._state_ndim
 
-        if not test and np.random.rand() < self.epsilon:
+        if not test and np.random.rand() < self.epsilon([self.n_update])[0]:
             if is_single_input:
                 action = np.random.randint(self._action_dim)
             else:
-                action = np.array([np.random.randint(self._action_dim)
-                                   for _ in range(state.shape[0])], dtype=np.int64)
-            if tensor:
-                return tf.convert_to_tensor(action)
-            else:
-                return action
+                action = np.array([np.random.randint(self._action_dim) for _ in range(state.shape[0])], dtype=np.int64)
+            return action
 
         state = np.expand_dims(state, axis=0).astype(np.float32) if is_single_input else state
         action = self._get_action_body(tf.constant(state))
-        if tensor:
-            return action
+        if is_single_input:
+            return action.numpy()[0]
         else:
-            if is_single_input:
-                return action.numpy()[0]
-            else:
-                return action.numpy()
+            return action.numpy()
 
     @tf.function
     def _get_action_body(self, state):
         q_values = self.q_func(state)
         return tf.argmax(q_values, axis=1)
 
-    def train(self, states, actions, next_states, rewards, done, weights=None):
+    def train(self, states, actions, next_states, rewards, done, weights):
         if weights is None:
             weights = np.ones_like(rewards)
         td_errors, q_func_loss = self._train_body(states, actions, next_states, rewards, done, weights)
@@ -135,9 +108,6 @@ class DQN(tf.keras.Model):
         # Update target networks
         if self.n_update % self.target_replace_interval == 0:
             update_target_variables(self.q_func_target.weights, self.q_func.weights, tau=1.)
-
-        # Update exploration rate
-        self.epsilon = max(self.epsilon - self.epsilon_decay_rate, self.epsilon_min)
 
         return td_errors
 
@@ -153,12 +123,7 @@ class DQN(tf.keras.Model):
         return td_errors, q_func_loss
 
     def compute_td_error(self, states, actions, next_states, rewards, dones):
-        if isinstance(actions, tf.Tensor):
-            actions = tf.expand_dims(actions, axis=1)
-            rewards = tf.expand_dims(rewards, axis=1)
-            dones = tf.expand_dims(dones, 1)
-        return self._compute_td_error_body(
-            states, actions, next_states, rewards, dones)
+        return self._compute_td_error_body(states, actions, next_states, rewards, dones)
 
     @tf.function
     def _compute_td_error_body(self, states, actions, next_states, rewards, dones):
@@ -168,13 +133,10 @@ class DQN(tf.keras.Model):
         indices = tf.concat(values=[tf.expand_dims(tf.range(batch_size), axis=1), actions], axis=1)
         current_Q = tf.expand_dims(tf.gather_nd(self.q_func(states), indices), axis=1)
 
-        if self._enable_double_dqn:
-            max_q_indexes = tf.argmax(self.q_func(next_states),axis=1, output_type=tf.int32)
-            indices = tf.concat(values=[tf.expand_dims(tf.range(batch_size), axis=1),tf.expand_dims(max_q_indexes, axis=1)], axis=1)
-            target_Q = tf.expand_dims(tf.gather_nd(self.q_func_target(next_states), indices), axis=1)
-            target_Q = rewards + not_dones * self.discount * target_Q
-        else:
-            target_Q = rewards + not_dones * self.discount * tf.reduce_max(self.q_func_target(next_states), keepdims=True, axis=1)
+        max_q_indexes = tf.argmax(self.q_func(next_states),axis=1, output_type=tf.int32)
+        indices = tf.concat(values=[tf.expand_dims(tf.range(batch_size), axis=1),tf.expand_dims(max_q_indexes, axis=1)], axis=1)
+        target_Q = tf.expand_dims(tf.gather_nd(self.q_func_target(next_states), indices), axis=1)
+        target_Q = rewards + not_dones * self.discount * target_Q
         target_Q = tf.stop_gradient(target_Q)
         td_errors = current_Q - target_Q
         return td_errors
@@ -182,24 +144,34 @@ class DQN(tf.keras.Model):
     def save_agent(self, filename):
         self.q_func.save(f"DQN_{filename}")
 
+    def epsilon(self, eps):
+        epsilon = []
+        eps_range = self.epsilon_init - self.epsilon_final
+        for ep in eps:
+            if ep < self.epsilon_init_step:
+                epsilon.append(0)
+            else:
+                epsilon.append(eps_range*np.exp(-self.epsilon_decay*(ep-self.epsilon_init_step))+self.epsilon_final)
+        return epsilon
+
 
 class Actor(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, units=[32, 32], name="Actor"):
-        super().__init__(name=name)
+    def __init__(self, action_dim, units):
+        super().__init__()
         self.l1 = Dense(units[0], name="L1", activation="relu")
         self.l2 = Dense(units[1], name="L2", activation="relu")
-        self.l3 = Dense(action_dim, name="L3", activation="tanh")
+        self.l3 = Dense(action_dim, name="L3", activation="linear")
 
     def call(self, inputs):
         features = self.l1(inputs)
         features = self.l2(features)
         action = self.l3(features)
-        return action
+        return tf.clip_by_value(action, -1, 1)
 
 
 class Critic(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, units=[32, 32], name="Critic"):
-        super().__init__(name=name)
+    def __init__(self, units):
+        super().__init__()
         self.l1 = Dense(units[0], name="L1", activation="relu")
         self.l2 = Dense(units[1], name="L2", activation="relu")
         self.l3 = Dense(1, name="L3", activation="linear")
@@ -214,54 +186,42 @@ class Critic(tf.keras.Model):
 
 
 class DDPG(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, max_action=1., lr_actor=0.001, lr_critic=0.001, actor_units=[16, 8],
-        critic_units=[16, 8], sigma=0.1, tau=0.005, discount=None, load_model=None):
+    def __init__(self, state_shape, action_dim, max_action, actor_units, critic_units, sigma, tau, discount, load_model):
         super().__init__()
 
-        # Define and initialize Actor network
-        if load_model is None:
-            self.actor = Actor(state_shape, action_dim, actor_units)
-            self.actor_target = Actor(state_shape, action_dim, actor_units)
-        else:
-            self.actor = tf.keras.models.load_model(f"DDPG_{load_model}/actor")
-            self.actor_target = tf.keras.models.load_model(f"DDPG_{load_model}/actor")
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_actor)
-        update_target_variables(self.actor_target.weights,self.actor.weights, tau=1.)
-
-        # Define and initialize Critic network
-        if load_model is None:
-            self.critic = Critic(state_shape, action_dim, critic_units)
-            self.critic_target = Critic(state_shape, action_dim, critic_units)
-        else:
-            self.critic = tf.keras.models.load_model(f"DDPG_{load_model}/critic")
-            self.critic_target = tf.keras.models.load_model(f"DDPG_{load_model}/critic")
-        
-
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_critic)
-        update_target_variables(self.critic_target.weights, self.critic.weights, tau=1.)
-
-        # Set hyperparameters
+        # Assign variables
         self.sigma = sigma
         self.tau = tau
-
-        # Oops
         self.discount=discount
         self.max_grad = 10
         self.max_action = max_action
 
-    def get_action(self, state, test=False, tensor=False):
-        is_single_state = len(state.shape) == 1
-        if not tensor:
-            assert isinstance(state, np.ndarray)
-        state = np.expand_dims(state, axis=0).astype(
-            np.float32) if is_single_state else state
-        action = self._get_action_body(
-            tf.constant(state), self.sigma * (1. - test),
-            tf.constant(self.max_action, dtype=tf.float32))
-        if tensor:
-            return action
+        # Define and initialize Actor network
+        if load_model is None:
+            self.actor = Actor(action_dim, actor_units)
+            self.actor_target = Actor(action_dim, actor_units)
         else:
-            return action.numpy()[0] if is_single_state else action.numpy()
+            self.actor = tf.keras.models.load_model(f"{load_model}/actor")
+            self.actor_target = tf.keras.models.load_model(f"{load_model}/actor")
+        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        update_target_variables(self.actor_target.weights,self.actor.weights, tau=1.)
+
+        # Define and initialize Critic network
+        if load_model is None:
+            self.critic = Critic(critic_units)
+            self.critic_target = Critic(critic_units)
+        else:
+            self.critic = tf.keras.models.load_model(f"{load_model}/critic")
+            self.critic_target = tf.keras.models.load_model(f"{load_model}/critic")
+        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        update_target_variables(self.critic_target.weights, self.critic.weights, tau=1.)
+
+
+    def get_action(self, state, test):
+        is_single_state = len(state.shape) == 1
+        state = np.expand_dims(state, axis=0).astype(np.float32) if is_single_state else state
+        action = self._get_action_body(tf.constant(state), self.sigma * (1. - test),tf.constant(self.max_action, dtype=tf.float32))
+        return action.numpy()[0] if is_single_state else action.numpy()
 
     @tf.function
     def _get_action_body(self, state, sigma, max_action):
@@ -269,9 +229,9 @@ class DDPG(tf.keras.Model):
         action += tf.random.normal(shape=action.shape, mean=0., stddev=sigma, dtype=tf.float32)
         return tf.clip_by_value(action, -max_action, max_action)
 
-    def train(self, states, actions, next_states, rewards, done, weights=None):
-        if weights is None:
-            weights = np.ones_like(rewards)
+    def train(self, states, actions, next_states, rewards, done, weights):
+        # if weights is None:
+        #     weights = np.ones_like(rewards)
         actor_loss, critic_loss, td_errors = self._train_body(states, actions, next_states, rewards, done, weights)
         return td_errors
 
@@ -299,10 +259,10 @@ class DDPG(tf.keras.Model):
 
     def compute_td_error(self, states, actions, next_states, rewards, dones):
         if isinstance(actions, tf.Tensor):
+            print("Do I even use this?")
             rewards = tf.expand_dims(rewards, axis=1)
             dones = tf.expand_dims(dones, 1)
-        td_errors = self._compute_td_error_body(
-            states, actions, next_states, rewards, dones)
+        td_errors = self._compute_td_error_body(states, actions, next_states, rewards, dones)
         return np.abs(np.ravel(td_errors.numpy()))
 
     @tf.function

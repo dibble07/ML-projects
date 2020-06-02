@@ -49,9 +49,11 @@ class CarGameEnv:
 		self.outer_coords = temp_coords[::-1]
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
+		self.lap_length = self.middle_poly.length
+		print(self.lap_length)
 		# initialise car
 		self.sense_ang = np.array([0])
-		self.sense_ang = np.linspace(-90, 90, num=5, endpoint = True)
+		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
 		self.mass = 750
 		self.aero_drag_v2 = 0.5*1.225*1.3
 		self.aero_down_v2 = self.aero_drag_v2*2.5
@@ -69,8 +71,8 @@ class CarGameEnv:
 		self.patience = 10
 		self.lap_targ = 2
 		self.loc_mem_sz = 50
-		# self.dist_mem_ind = list(range(0,10,2))
-		self.dist_mem_ind = [0]
+		self.dist_mem_ind = list(range(0,10,2))
+		# self.dist_mem_ind = [0]
 		# reset
 		self.reset()
 		# spaces
@@ -132,7 +134,7 @@ class CarGameEnv:
 		turn_grip_avail = (total_grip_avail**2-long_force**2)**0.5
 		if act_steer != 0:
 			rot_sign = np.sign(act_steer)
-			r_turn_grip = self.mass*self.vel**2/turn_grip_avail
+			r_turn_grip = np.inf if turn_grip_avail == 0 else self.mass*self.vel**2/turn_grip_avail
 			if r_turn_grip == 0:
 				steer_ang_grip = np.inf
 			elif np.isinf(r_turn_grip):

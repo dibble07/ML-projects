@@ -1,13 +1,4 @@
-tanh to clamped
 recreate weights initialiser
-compare discrete vs continuous - add memory and more sensing
-reduce warnings
-remove default parameters from algos and simplify
-incorporate epsilon function/decay
-
-misc:
-plot text of score in centre
-add repeated episilon spikes
 
 environment features/physics:
 accelerate and corner at the same time limit by grip
