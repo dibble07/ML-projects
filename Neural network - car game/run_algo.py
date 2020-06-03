@@ -32,10 +32,10 @@ def evaluate_policy():
 # Define variables
 continuous = True
 use_prioritized_rb=True
-show_test_progress=True
+show_test_progress=False
 max_steps=250_000
 test_interval=500
-memory_capacity=100_000
+memory_capacity=20_000
 batch_size=64
 
 # Initialise environment, policy and replay buffer
@@ -46,7 +46,7 @@ if continuous:
         state_shape=env.observation_space.shape,
         action_dim=env.action_space.high.size,
         discount=0.99,
-        load_model=None,
+        load_model="DDPG_23-26-45_2.00_301",
         actor_units=[64, 32],
         critic_units=[64, 32],
         sigma=0.1,

@@ -230,8 +230,6 @@ class DDPG(tf.keras.Model):
         return tf.clip_by_value(action, -max_action, max_action)
 
     def train(self, states, actions, next_states, rewards, done, weights):
-        # if weights is None:
-        #     weights = np.ones_like(rewards)
         actor_loss, critic_loss, td_errors = self._train_body(states, actions, next_states, rewards, done, weights)
         return td_errors
 
@@ -258,10 +256,6 @@ class DDPG(tf.keras.Model):
         return actor_loss, critic_loss, td_errors
 
     def compute_td_error(self, states, actions, next_states, rewards, dones):
-        if isinstance(actions, tf.Tensor):
-            print("Do I even use this?")
-            rewards = tf.expand_dims(rewards, axis=1)
-            dones = tf.expand_dims(dones, 1)
         td_errors = self._compute_td_error_body(states, actions, next_states, rewards, dones)
         return np.abs(np.ravel(td_errors.numpy()))
 

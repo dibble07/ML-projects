@@ -1,7 +1,4 @@
-recreate weights initialiser
-
 environment features/physics:
-accelerate and corner at the same time limit by grip
 car collisions?
 multiple cars - need to move replay buffer and sampling inside agent
 turning head/sensor array
