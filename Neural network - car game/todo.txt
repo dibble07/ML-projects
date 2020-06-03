@@ -1,17 +1,19 @@
 environment features/physics:
-car collisions?
-multiple cars - need to move replay buffer and sampling inside agent
 turning head/sensor array
+configure reward weights
+multiple cars
+make car an object
+need to move replay buffer and sampling inside agent
 
 race car/driver differences:
-sensing array - no, distribution, movement
+sensing array - number, distribution, movement
 car parameters - weight, grip, turning radius, acceleration, top speed
-exploration vs exploitation
+learning rate - tau
 memory - amount and distribution
-architecture
+NN architecture
 rewards weights - emphasis completing laps vs staying on track
 
-tactical additions?
+tactical additions:
 remaining laps
 tyre degradation
 fuel use
