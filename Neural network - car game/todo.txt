@@ -1,10 +1,6 @@
-plot text of score in centre
-visualise memory locations
-add repeated episilon spikes
-actor - critic for continuous action space
-car collisions?
-
 environment features/physics:
+car collisions?
+multiple cars - need to move replay buffer and sampling inside agent
 turning head/sensor array
 
 race car/driver differences:
@@ -13,7 +9,7 @@ car parameters - weight, grip, turning radius, acceleration, top speed
 exploration vs exploitation
 memory - amount and distribution
 architecture
-rewards weights - emphasis on speed vs completing laps vs staying on track
+rewards weights - emphasis completing laps vs staying on track
 
 tactical additions?
 remaining laps

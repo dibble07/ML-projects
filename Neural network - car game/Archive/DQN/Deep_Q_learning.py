@@ -183,7 +183,7 @@ update_target_freq = 5
 
 environment = CarGameEnv()
 # environment = BlobEnv(5)
-agent = DQN_agent("Best_18-43-23_2.002_358.model")
+agent = DQN_agent("Best_07-42-09_2.00_326.0.model")
 
 # Loop for each episode
 evaluation_episodes = []

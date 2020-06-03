@@ -1,11 +1,9 @@
-from gym import spaces
-from math import cos, sin, pi, tan, atan
+from math import cos, sin, pi
 import numpy as np
 import random
 from PIL import Image
 import cv2
 from shapely.geometry import Polygon, Point, LinearRing, LineString
-
 
 def rotate_points(point_in, angle, centre):
 	ox, oy = centre
@@ -29,7 +27,7 @@ def wrap_points(list_in):
 
 class CarGameEnv:
 
-	def __init__(self, continuous_flag):
+	def __init__(self):
 		# initialise track
 		# track_coords = [(100, 200), (100, 500), (500, 500), (500, 100), (100, 100)]
 		# track_coords = [(100, 200), (100, 500), (300, 500), (300+141, 300+141), (300+200, 300), (300+141, 300-141), (300, 100), (100, 100)]
@@ -49,18 +47,14 @@ class CarGameEnv:
 		self.outer_coords = temp_coords[::-1]
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
-		self.lap_length = self.middle_poly.length
-		print(self.lap_length)
 		# initialise car
-		self.sense_ang = np.array([0])
 		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
 		self.mass = 750
 		self.aero_drag_v2 = 0.5*1.225*1.3
 		self.aero_down_v2 = self.aero_drag_v2*2.5
 		self.forward_force = 8000
 		self.vel_max = (self.forward_force/self.aero_drag_v2)**0.5
-		self.wheelbase = 3.7
-		self.steer_lock_ang = atan(self.wheelbase/30)
+		self.r_turn_min = 30
 		self.friction_coeff = 1.6
 		self.time_per_frame = 0.2
 		self.sz = (16, 32)
@@ -72,30 +66,15 @@ class CarGameEnv:
 		self.lap_targ = 2
 		self.loc_mem_sz = 50
 		self.dist_mem_ind = list(range(0,10,2))
-		# self.dist_mem_ind = [0]
 		# reset
 		self.reset()
-		# spaces
-		high = np.ones(len(self.state))
-		self.observation_space = spaces.Box(-high, high, dtype=np.float32)
-		self.continuous = continuous_flag
-		if self.continuous:
-			if self.sense_ang.size > 1:
-				self.action_space = spaces.Box(-1, +1, (2,), dtype=np.float32)
-			else:
-				self.action_space = spaces.Box(-1, +1, (1,), dtype=np.float32)
-		else:
-			if self.sense_ang.size > 1:
-				self.actions_avail = [(1,0) , (-1,0), (0,0), (0,-1), (0,1)]
-			else:
-				self.actions_avail = [(1,) , (-1,), (0,)]
-			self.action_space = spaces.Discrete(len(self.actions_avail))
+		self.action_space = ["accelerate" , "decelerate", "maintain", "left", "right"]
 
 	def reset(self):
 		self.finished_episode = False
 		self.frame_curr = 0
 		self.bear = 0
-		self.vel = 5
+		self.vel = 0
 		self.lap_whole = 0
 		self.lap_float = None
 		self.lap_float_max = self.lap_float
@@ -111,60 +90,43 @@ class CarGameEnv:
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 		return self.state
 
-	def step(self, action_in):
+	def step(self, action_ind):
+		# reset if finished
+		if self.finished_episode:
+			return self.reset()
 		# calculate movements
+		action = self.action_space[action_ind]
 		dist = self.vel*self.time_per_frame
 		drag = self.aero_drag_v2*self.vel**2
-		total_grip_avail = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
+		grip = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
 		rotation = None
-		if self.continuous:
-			if len(action_in)==1:
-				act_for_aft, act_steer = action_in[0], 0
-			else:
-				act_for_aft, act_steer = action_in
-		else:
-			action = self.actions_avail[action_in]
-			if len(action)==1:
-				act_for_aft, act_steer = action[0], 0
-			else:
-				act_for_aft, act_steer = action
-		long_force_max = min(self.forward_force, total_grip_avail) if act_for_aft >= 0 else -total_grip_avail
-		long_force = abs(act_for_aft)*long_force_max
-		self.vel = max(0,self.vel+(long_force - drag)/self.mass*self.time_per_frame)
-		turn_grip_avail = (total_grip_avail**2-long_force**2)**0.5
-		if act_steer != 0:
-			rot_sign = np.sign(act_steer)
-			r_turn_grip = np.inf if turn_grip_avail == 0 else self.mass*self.vel**2/turn_grip_avail
-			if r_turn_grip == 0:
-				steer_ang_grip = np.inf
-			elif np.isinf(r_turn_grip):
-				steer_ang_grip = 0
-			else:
-				steer_ang_grip = atan(self.wheelbase/r_turn_grip)
-			steer_ang_max = min(self.steer_lock_ang, steer_ang_grip)
-			steer_ang = abs(act_steer)*steer_ang_max
-			if steer_ang != 0:
-				rotation = (rot_sign, steer_ang)
-
+		if action == "accelerate":
+			self.vel = max(0,self.vel+(self.forward_force - drag)/self.mass*self.time_per_frame)
+		elif action == "decelerate":
+			self.vel = max(0,self.vel+(-grip - drag)/self.mass*self.time_per_frame)
+		elif action in ["left","right"]:
+			rot_sign = 1 if action == "right" else -1
+			rot_radius = max(self.r_turn_min, self.mass*self.vel**2/grip)
+			rotation = (rot_sign, rot_radius)
 		# implement movements and update scores and statuses
 		self.move(dist, rotation)
 		self.frame_curr +=1
 		self.score_analyse()
-		reward = self.score-self.score_prev
-		# reward = 1 if self.score>self.score_prev else 0
 		if self.finished_course or not self.on_course or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
 			self.finished_episode = True
 		# update sensing history
 		del self.dist_mem[-1]
-		self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]] + self.dist_mem
+		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]] + self.dist_mem
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
-		return self.state, reward, self.finished_episode, {}
+		return self.state, self.score-self.score_prev, self.finished_episode
 
 	def score_analyse(self):
 		# calculate score
 		self.score_prev = self.score
 		self.score = self.lap_float
+		if not self.on_course:
+			self.score -=1
 		# update maximum position
 		if self.lap_float_max is None:
 			new_max = True
@@ -188,8 +150,7 @@ class CarGameEnv:
 			self.hitbox_center = (self.hitbox_center[0]+x_delt, self.hitbox_center[1]+y_delt)
 		else:
 			# calculate center of rotation and angle or rotation
-			rot_sign, steer_ang = rotation
-			rot_radius = self.wheelbase/tan(steer_ang)
+			rot_sign, rot_radius = rotation
 			angle_rad = (self.bear+90*rot_sign)/180*pi
 			x_delt = rot_radius*sin(angle_rad)
 			y_delt = rot_radius*cos(angle_rad)
@@ -300,13 +261,9 @@ class CarGameEnv:
 			self.car_sense_loc_trans = car_sense_loc_trans
 			# car - history points
 			car_loc_mem_trans = []
-			for i in range(len(self.loc_mem)):
-				if i in self.dist_mem_ind:
-					circle = rendering.make_circle(2)
-					circle.set_color(0,1,0)
-				else:
-					circle = rendering.make_circle(1)
-					circle.set_color(0,0,1)
+			for __ in self.loc_mem:
+				circle = rendering.make_circle(1)
+				circle.set_color(0,0,1)
 				circle_trans = rendering.Transform()
 				circle.add_attr(circle_trans)
 				car_loc_mem_trans.append(circle_trans)
@@ -327,19 +284,144 @@ class CarGameEnv:
 
 		return self.viewer.render(return_rgb_array = True)
 
-# import time
-# environment = CarGameEnv(True)
-# action = [0,0]
-# while not environment.finished_episode:
-# 	state, __, __, __ = environment.step(action)
-# 	if state[1]>0.2:
-# 		action = [1.0, 0.0] 
-# 	elif state[1]<=0.2 and state[3]>0.2:
-# 		action = [-1.0, 0.0] 
-# 	elif state[1]<=0.2 and state[3]<=0.2 and state[2]-state[0]<=0.1:
-# 		action = [0.0, 0.0] 
-# 	elif state[1]<=0.2 and state[3]<=0.2 and state[2]-state[0]>0.1:
-# 		action = [0.0, 1.0] 
-# 	print(state, action)
-	# time.sleep(0.1)
-	# environment.render()
+class Blob:
+
+	def __init__(self, size, colour):
+		self.size = size
+		self.x = np.random.randint(0, size)
+		self.y = np.random.randint(0, size)
+		self.colour = colour
+
+	def __str__(self):
+		return f"Blob ({self.x}, {self.y})"
+
+	def __sub__(self, other):
+		return (self.x-other.x, self.y-other.y)
+
+	def __eq__(self, other):
+		return self.x == other.x and self.y == other.y
+
+	def action(self, choice):
+		if choice == 0:
+			self.move(x=1, y=1)
+		elif choice == 1:
+			self.move(x=-1, y=-1)
+		elif choice == 2:
+			self.move(x=-1, y=1)
+		elif choice == 3:
+			self.move(x=1, y=-1)
+		elif choice == 4:
+			self.move(x=1, y=0)
+		elif choice == 5:
+			self.move(x=-1, y=0)
+		elif choice == 6:
+			self.move(x=0, y=1)
+		elif choice == 7:
+			self.move(x=0, y=-1)
+		elif choice == 8:
+			self.move(x=0, y=0)
+
+	def move(self, x=False, y=False):
+
+		# If no value for x, move randomly
+		if not x:
+			self.x += np.random.randint(-1, 2)
+		else:
+			self.x += x
+
+		# If no value for y, move randomly
+		if not y:
+			self.y += np.random.randint(-1, 2)
+		else:
+			self.y += y
+
+		# If we are out of bounds, fix!
+		if self.x < 0:
+			self.x = 0
+		elif self.x > self.size-1:
+			self.x = self.size-1
+		if self.y < 0:
+			self.y = 0
+		elif self.y > self.size-1:
+			self.y = self.size-1
+
+class BlobEnv:
+
+	def __init__(self, size):
+		self.SIZE = size
+		self.RETURN_IMAGES = False
+		self.MOVE_PENALTY = 1
+		self.ENEMY_PENALTY = 300
+		self.FOOD_REWARD = 25
+		self.observation_space = [np.arange(-(size-1),size)]*4
+		self.action_space = list(range(9))
+
+	def reset(self):
+		self.player = Blob(self.SIZE, (255, 175, 0))
+		self.food = Blob(self.SIZE, (0, 255, 0))
+		while self.food == self.player:
+			self.food = Blob(self.SIZE, (0, 255, 0))
+		self.enemy = Blob(self.SIZE, (0, 0, 255))
+		while self.enemy == self.player or self.enemy == self.food:
+			self.enemy = Blob(self.SIZE, (0, 0, 255))
+
+		self.episode_step = 0
+
+		if self.RETURN_IMAGES:
+			observation = np.array(self.get_image())/255
+		else:
+			observation = tuple(i/(self.SIZE-1) for i in (self.player-self.food) + (self.player-self.enemy))
+		return observation
+
+	def step(self, action):
+		self.episode_step += 1
+		self.player.action(action)
+
+		if self.RETURN_IMAGES:
+			new_observation = np.array(self.get_image())/255
+		else:
+			new_observation = tuple(i/(self.SIZE-1) for i in (self.player-self.food) + (self.player-self.enemy))
+
+
+		if self.player == self.enemy:
+			reward = -self.ENEMY_PENALTY
+		elif self.player == self.food:
+			reward = self.FOOD_REWARD
+		else:
+			reward = -self.MOVE_PENALTY
+
+		done = False
+		if reward == self.FOOD_REWARD or reward == -self.ENEMY_PENALTY or self.episode_step >= 100:
+			done = True
+
+		return new_observation, reward, done
+
+	def render(self):
+		img = self.get_image()
+		img = img.resize((300, 300))  # resizing so we can see our agent in all its glory.
+		cv2.imshow("image", np.array(img))  # show it!
+		cv2.waitKey(1)
+
+	# FOR CNN #
+	def get_image(self):
+		env = np.zeros((self.SIZE, self.SIZE, 3), dtype=np.uint8)  # starts an rbg of our size
+		env[self.food.x][self.food.y] = self.food.colour  # sets the food location tile to green color
+		env[self.enemy.x][self.enemy.y] = self.enemy.colour  # sets the enemy location to red
+		env[self.player.x][self.player.y] = self.player.colour  # sets the player tile to blue
+		img = Image.fromarray(env, 'RGB')  # reading to rgb. Apparently. Even tho color definitions are bgr. ???
+		return img
+ 
+
+env = CarGameEnv()
+# action = 0
+# while not env.finished_episode:
+# 	env.step(action)
+# 	if env.frame_curr == 6:
+# 		action = 2
+# 	if env.frame_curr == 12:
+# 		action = 3
+# 	if env.frame_curr == 18:
+# 		action = 0
+# 	if env.frame_curr == 24:
+# 		action = 3
+	# env.render()
