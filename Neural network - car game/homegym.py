@@ -117,7 +117,6 @@ class CarGameEnv:
 		drag = self.aero_drag_v2*self.vel**2
 		total_grip_avail = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
 		rotation = None
-		metrics = [self.lap_float, self.vel, total_grip_avail]
 		if self.continuous:
 			if len(action_in)==1:
 				act_for_aft, act_steer = action_in[0], 0
@@ -129,6 +128,7 @@ class CarGameEnv:
 				act_for_aft, act_steer = action[0], 0
 			else:
 				act_for_aft, act_steer = action
+		metrics = [self.lap_float, act_for_aft, act_steer, self.vel, total_grip_avail]
 		long_force_max = min(self.forward_force, total_grip_avail) if act_for_aft >= 0 else -total_grip_avail
 		long_force = abs(act_for_aft)*long_force_max
 		self.vel = max(0,self.vel+(long_force - drag)/self.mass*self.time_per_frame)

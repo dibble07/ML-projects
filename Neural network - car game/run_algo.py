@@ -10,6 +10,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib import style
 style.use("ggplot")
+matplotlib.rcParams.update({'font.size': 6})
 from matplotlib.animation import FuncAnimation
 import numpy as np
 import os
@@ -21,15 +22,17 @@ from homegym import CarGameEnv
 # Define user functions
 def evaluate_policy():
     render_frames=[]
-    metrics_dict = {"laps": [], "speed": [], "grip": [], "longitudinal_force": [], "steering_angle": []}
+    metrics_dict = {"laps": [], "act_long": [], "act_steer": [], "speed": [], "grip": [], "longitudinal_force": [], "steering_angle": []}
     obs = test_env.reset()
     done = False
     while not done:
         action = agent.get_action(obs, test=True)
-        next_obs, _, done, (laps, speed, grip, longitudinal_force, steering_angle) = test_env.step(action)
+        next_obs, _, done, (laps, act_long, act_steer, speed, grip, longitudinal_force, steering_angle) = test_env.step(action)
         if show_test_progress:
             render_frames.append(test_env.render())
             metrics_dict["laps"].append(laps)
+            metrics_dict["act_long"].append(act_long)
+            metrics_dict["act_steer"].append(act_steer)
             metrics_dict["speed"].append(speed)
             metrics_dict["grip"].append(grip)
             metrics_dict["longitudinal_force"].append(longitudinal_force)
@@ -39,39 +42,26 @@ def evaluate_policy():
 
 def display_episode(render, metrics, filedir):
 	# initialise figure
-    fig1, (ax1_1, ax1_2_1) = plt.subplots(nrows=2, gridspec_kw={"height_ratios": [4,1]}, figsize=(7,6))
-    fig1.tight_layout()
+    fig1, ax1 = plt.subplots(nrows=4, figsize=(8,5))
     # plot metrics
-    ax1_2_1.plot(metrics["laps"],metrics["speed"], label="speed", color="tab:blue")
-    ax1_2_1.plot(metrics["laps"],[x/1000 for x in metrics["grip"]], label="grip", color="tab:orange")
-    ax1_2_2 = ax1_2_1.twinx()
-    ax1_2_2.plot(metrics["laps"],[x/1000 for x in metrics["longitudinal_force"]], label="long_force", color="tab:green")
-    ax1_2_2.plot(metrics["laps"],[x*180/pi for x in metrics["steering_angle"]], label="steer_ang", color="tab:red")
-    h_1, l_1 = ax1_2_1.get_legend_handles_labels()
-    h_2, l_2 = ax1_2_2.get_legend_handles_labels()
-    ax1_2_2.legend(h_1+h_2, l_1+l_2, bbox_to_anchor=(1.05, 1.0), loc="upper left")
-    #initialise image and metric markers
-    img_1 = ax1_1.imshow(render[0])
-    ax1_1.axis('off')
-    l_speed, = ax1_2_1.plot(metrics["laps"][0],metrics["speed"][0], "o", color="tab:blue")
-    l_grip, = ax1_2_1.plot(metrics["laps"][0],metrics["grip"][0]/1000, "o", color="tab:orange")
-    l_longitudinal_force, = ax1_2_2.plot(metrics["laps"][0],metrics["longitudinal_force"][0]/1000, "o", color="tab:green")
-    l_steering_angle, = ax1_2_2.plot(metrics["laps"][0],metrics["steering_angle"][0]*180/pi, "o", color="tab:red")
-
-    def update(frame):
-        img_1.set_data(render[frame])
-        l_speed.set_data(metrics["laps"][frame],metrics["speed"][frame])
-        l_grip.set_data(metrics["laps"][frame],metrics["grip"][frame]/1000)
-        l_longitudinal_force.set_data(metrics["laps"][frame],metrics["longitudinal_force"][frame]/1000)
-        l_steering_angle.set_data(metrics["laps"][frame],metrics["steering_angle"][frame]*180/pi)
-        return img_1, l_speed, l_grip, l_longitudinal_force, l_steering_angle
-
-    # create and save animation
-    ani = FuncAnimation(fig1, update, frames=range(len(render)), blit=True, interval=33)
-    ani.save(filedir + "/annotated.gif", dpi=150)
+    ax1[0].plot(metrics["laps"],metrics["act_long"], label="Fore-aft")
+    ax1[0].plot(metrics["laps"],metrics["act_steer"], label="Steer")
+    ax1[0].set_ylabel("Actions [-]")
+    ax1[0].legend(loc="best")
+    ax1[1].plot(metrics["laps"],[x/1000 for x in metrics["grip"]], label="Grip")
+    ax1[1].plot(metrics["laps"],[x/1000 if x>0 else 0 for x in metrics["longitudinal_force"]], label="Acceleration")
+    ax1[1].plot(metrics["laps"],[-x/1000 if x<0 else 0 for x in metrics["longitudinal_force"]], label="Braking")
+    ax1[1].set_ylabel("Forces [kN]")
+    ax1[1].legend(loc="best")
+    ax1[2].plot(metrics["laps"],[x*180/pi for x in metrics["steering_angle"]])
+    ax1[2].set_ylabel("Steering [deg]")
+    ax1[3].plot(metrics["laps"],metrics["speed"])
+    ax1[3].set_ylabel("Speed [m/s]")
+    fig1.tight_layout()
+    fig1.savefig(filedir + "/metrics.png")
 
     # save video without metrics
-    with imageio.get_writer(filedir + "/raw.mp4", fps=30) as video:
+    with imageio.get_writer(filedir + "/video.mp4", fps=30) as video:
         for frame in render:
             video.append_data(frame)
 
