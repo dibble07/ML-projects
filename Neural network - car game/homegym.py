@@ -117,6 +117,7 @@ class CarGameEnv:
 		drag = self.aero_drag_v2*self.vel**2
 		total_grip_avail = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
 		rotation = None
+		metrics = [self.lap_float, self.vel, total_grip_avail]
 		if self.continuous:
 			if len(action_in)==1:
 				act_for_aft, act_steer = action_in[0], 0
@@ -145,6 +146,7 @@ class CarGameEnv:
 			steer_ang = abs(act_steer)*steer_ang_max
 			if steer_ang != 0:
 				rotation = (rot_sign, steer_ang)
+		metrics = metrics + [long_force, steer_ang]
 
 		# implement movements and update scores and statuses
 		self.move(dist, rotation)
@@ -159,7 +161,7 @@ class CarGameEnv:
 		self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]] + self.dist_mem
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
-		return self.state, reward, self.finished_episode, {}
+		return self.state, reward, self.finished_episode, metrics
 
 	def score_analyse(self):
 		# calculate score

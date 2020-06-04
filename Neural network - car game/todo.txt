@@ -1,6 +1,9 @@
+to do:
+visulise stats - speed, grip, long force, steering angle
+configure reward weights
+
 environment features/physics:
 turning head/sensor array
-configure reward weights
 multiple cars
 make car an object
 need to move replay buffer and sampling inside agent

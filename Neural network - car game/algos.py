@@ -54,6 +54,7 @@ class DQN(tf.keras.Model):
         super().__init__()
 
         # Assign variables
+        self.alg_name = "DQN"
         self.epsilon_init_step = epsilon_init_step
         self.epsilon_init = epsilon_init
         self.epsilon_final = epsilon_final
@@ -142,7 +143,7 @@ class DQN(tf.keras.Model):
         return td_errors
 
     def save_agent(self, filename):
-        self.q_func.save(f"DQN_{filename}")
+        self.q_func.save(f"{self.alg_name}_{filename}")
 
     def epsilon(self, eps):
         epsilon = []
@@ -190,6 +191,7 @@ class DDPG(tf.keras.Model):
         super().__init__()
 
         # Assign variables
+        self.alg_name = "DDPG"
         self.sigma = sigma
         self.tau = tau
         self.discount=discount
@@ -270,5 +272,5 @@ class DDPG(tf.keras.Model):
         return td_errors
 
     def save_agent(self, filename):
-        self.actor.save(f"DDPG_{filename}/actor")
-        self.critic.save(f"DDPG_{filename}/critic")
+        self.actor.save(f"{self.alg_name}_{filename}/actor")
+        self.critic.save(f"{self.alg_name}_{filename}/critic")
