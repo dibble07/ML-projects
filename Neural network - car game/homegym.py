@@ -155,7 +155,7 @@ class CarGameEnv:
 		self.frame_curr +=1
 		self.score_analyse()
 		reward = self.score-self.score_prev
-		reward = 1 if self.score>self.score_prev else 0
+		# reward = 1 if self.score>self.score_prev else 0
 		if self.finished_course or not self.on_course or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
 			self.finished_episode = True
 		# update sensing history

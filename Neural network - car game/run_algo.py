@@ -89,11 +89,11 @@ if continuous:
 		state_shape=env.observation_space.shape,
 		action_dim=env.action_space.high.size,
 		discount=0.99,
-		load_model=None,
+		load_model="DDPG_13-42-00_2.00_580",
 		actor_units=[64, 32],
 		critic_units=[64, 32],
 		sigma=0.1,
-		tau=0.001,
+		tau=0.0001,
 		max_action=env.action_space.high[0]
 		)
 else:
