@@ -1,9 +1,10 @@
+import cv2
 from gym import spaces
 from math import cos, sin, pi, tan, atan
 import numpy as np
 import random
 from PIL import Image
-import cv2
+import scipy.stats as st
 from shapely.geometry import Polygon, Point, LinearRing, LineString
 
 
@@ -51,8 +52,8 @@ class CarGameEnv:
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 		self.lap_length = self.middle_poly.length
 		# initialise car
-		self.sense_ang = np.array([0])
-		self.sense_ang = np.linspace(-90, 90, num=9, endpoint=True)
+		temp = 1-(1-st.norm.cdf(3))*2
+		self.sense_ang = st.norm.ppf(1-(1-np.linspace(-temp, temp, num=9, endpoint=True))/2)*30
 		self.mass = 750
 		self.aero_drag_v2 = 0.5*1.225*1.3
 		self.aero_down_v2 = self.aero_drag_v2*2.5
@@ -72,7 +73,6 @@ class CarGameEnv:
 		self.lap_targ = 2
 		self.loc_mem_sz = 50
 		self.dist_mem_ind = list(range(0,10,2))
-		# self.dist_mem_ind = [0]
 		# reset
 		self.reset()
 		# spaces
@@ -155,7 +155,7 @@ class CarGameEnv:
 		self.frame_curr +=1
 		self.score_analyse()
 		reward = self.score-self.score_prev
-		# reward = 1 if self.score>self.score_prev else 0
+		reward = 1 if self.score>self.score_prev else 0
 		if self.finished_course or not self.on_course or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
 			self.finished_episode = True
 		# update sensing history
@@ -338,7 +338,7 @@ class CarGameEnv:
 			self.viewer = None
 
 # import time
-# environment = CarGameEnv(True)
+environment = CarGameEnv(True)
 # action = [0,0]
 # while not environment.finished_episode:
 # 	state, __, __, __ = environment.step(action)

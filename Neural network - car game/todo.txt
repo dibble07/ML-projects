@@ -1,10 +1,6 @@
 to do:
-spaces to tabs
-nonlinear sens_ang
-configure reward weights
 
 environment features/physics:
-turning head/sensor array
 multiple cars
 make car an object
 need to move replay buffer and sampling inside agent
