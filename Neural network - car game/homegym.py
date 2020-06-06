@@ -50,10 +50,9 @@ class CarGameEnv:
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 		self.lap_length = self.middle_poly.length
-		print(self.lap_length)
 		# initialise car
 		self.sense_ang = np.array([0])
-		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
+		self.sense_ang = np.linspace(-90, 90, num=9, endpoint=True)
 		self.mass = 750
 		self.aero_drag_v2 = 0.5*1.225*1.3
 		self.aero_down_v2 = self.aero_drag_v2*2.5
@@ -62,7 +61,8 @@ class CarGameEnv:
 		self.wheelbase = 3.7
 		self.steer_lock_ang = atan(self.wheelbase/30)
 		self.friction_coeff = 1.6
-		self.time_per_frame = 0.2
+		self.head_rot_max = 25
+		self.time_per_frame = 0.15
 		self.sz = (16, 32)
 		# misc
 		self.viewer = None
@@ -81,12 +81,12 @@ class CarGameEnv:
 		self.continuous = continuous_flag
 		if self.continuous:
 			if self.sense_ang.size > 1:
-				self.action_space = spaces.Box(-1, +1, (2,), dtype=np.float32)
+				self.action_space = spaces.Box(-1, +1, (3,), dtype=np.float32)
 			else:
 				self.action_space = spaces.Box(-1, +1, (1,), dtype=np.float32)
 		else:
 			if self.sense_ang.size > 1:
-				self.actions_avail = [(1,0) , (-1,0), (0,0), (0,-1), (0,1)]
+				self.actions_avail = [(1,0,0) , (-1,0,0), (0,0,0), (0,-1,0), (0,1,0)]
 			else:
 				self.actions_avail = [(1,) , (-1,), (0,)]
 			self.action_space = spaces.Discrete(len(self.actions_avail))
@@ -96,6 +96,7 @@ class CarGameEnv:
 		self.frame_curr = 0
 		self.bear = 0
 		self.vel = 5
+		self.head_rot_ang = 0
 		self.lap_whole = 0
 		self.lap_float = None
 		self.lap_float_max = self.lap_float
@@ -107,7 +108,7 @@ class CarGameEnv:
 		self.loc_mem = [self.hitbox_center]*self.loc_mem_sz
 		self.pos_analyse()
 		self.score_analyse()
-		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]]*self.loc_mem_sz
+		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]+[self.head_rot_ang/self.head_rot_max]]*self.loc_mem_sz
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 		return self.state
 
@@ -119,16 +120,17 @@ class CarGameEnv:
 		rotation = None
 		if self.continuous:
 			if len(action_in)==1:
-				act_for_aft, act_steer = action_in[0], 0
+				act_for_aft, act_steer, act_head_rot = action_in[0], 0, 0
 			else:
-				act_for_aft, act_steer = action_in
+				act_for_aft, act_steer, act_head_rot = action_in
 		else:
 			action = self.actions_avail[action_in]
 			if len(action)==1:
-				act_for_aft, act_steer = action[0], 0
+				act_for_aft, act_steer, act_head_rot = action[0], 0, 0
 			else:
-				act_for_aft, act_steer = action
-		metrics = [self.lap_float, act_for_aft, act_steer, self.vel, total_grip_avail]
+				act_for_aft, act_steer, act_head_rot = action
+		metrics = [self.lap_float, act_for_aft, act_steer, act_head_rot, self.head_rot_ang, self.vel, total_grip_avail]
+		self.head_rot_ang = act_head_rot*self.head_rot_max
 		long_force_max = min(self.forward_force, total_grip_avail) if act_for_aft >= 0 else -total_grip_avail
 		long_force = abs(act_for_aft)*long_force_max
 		self.vel = max(0,self.vel+(long_force - drag)/self.mass*self.time_per_frame)
@@ -158,7 +160,8 @@ class CarGameEnv:
 			self.finished_episode = True
 		# update sensing history
 		del self.dist_mem[-1]
-		self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]] + self.dist_mem
+		self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]+
+		[self.head_rot_ang/self.head_rot_max]] + self.dist_mem
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
 		return self.state, reward, self.finished_episode, metrics
@@ -241,7 +244,7 @@ class CarGameEnv:
 		line_min = []
 		dist = 1000
 		for ang_sense in self.sense_ang:
-			angle = (ang_sense+self.bear)/180*pi
+			angle = (ang_sense+self.bear+self.head_rot_ang)/180*pi
 			line_dir = LineString([(x, y), (x+dist*sin(angle), y+dist*cos(angle))])
 			dist_angle_min = None
 			line_angle_min = None
@@ -328,6 +331,11 @@ class CarGameEnv:
 			trans.set_translation(*loc)
 
 		return self.viewer.render(return_rgb_array = True)
+
+	def close(self):
+		if self.viewer:
+			self.viewer.close()
+			self.viewer = None
 
 # import time
 # environment = CarGameEnv(True)

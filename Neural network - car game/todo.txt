@@ -1,5 +1,5 @@
 to do:
-visulise stats - speed, grip, long force, steering angle
+nonlinear sens_ang
 configure reward weights
 
 environment features/physics:
