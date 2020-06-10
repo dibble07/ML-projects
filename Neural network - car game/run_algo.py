@@ -74,12 +74,11 @@ def display_episode(render, metrics, filedir):
 
 # Define variables
 continuous = True
-use_prioritized_rb=True
-show_test_progress=True
-max_steps=500_000
+use_prioritized_rb=False
+max_steps=1_500_000
 test_interval=500
 memory_capacity=100_000
-batch_size=128
+batch_size=256
 
 # Initialise environment, policy and replay buffer
 env = CarGameEnv(continuous)
@@ -89,11 +88,11 @@ if continuous:
 		state_shape=env.observation_space.shape,
 		action_dim=env.action_space.high.size,
 		discount=0.99,
-		load_model="DDPG_13-42-00_2.00_580",
-		actor_units=[64, 32],
-		critic_units=[64, 32],
+		load_model=None,
+		actor_units=[128, 64],
+		critic_units=[128, 64],
 		sigma=0.1,
-		tau=0.0001,
+		tau=0.00001,
 		max_action=env.action_space.high[0]
 		)
 else:
@@ -177,7 +176,7 @@ for total_steps in range(max_steps):
 # Visualise results
 print("All episodes done")
 fig2, ax2_1 = plt.subplots()
-ax2_1.set_xlabel("Episode")
+ax2_1.set_xlabel("Steps")
 color = 'tab:red'
 ax2_1.plot(evaluation_steps, [x*env.lap_length/(y*env.time_per_frame) for x,y in zip(evaluation_lap_float,evaluation_frame_count)] , color=color)
 ax2_1.set_ylabel("Speed [m/s]", color=color)

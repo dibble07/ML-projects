@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 
-load_name_blank = "DDPG_10-42-38_0.72_321"
+load_name_blank = "DDPG_17-42-45_0.10_ 83"
 load_name_base = "DDPG_12-01-38_2.00_281"
 
 for model_type in ["actor","critic"]:

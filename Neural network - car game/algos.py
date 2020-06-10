@@ -232,6 +232,7 @@ class DDPG(tf.keras.Model):
         return tf.clip_by_value(action, -max_action, max_action)
 
     def train(self, states, actions, next_states, rewards, done, weights):
+        weights = np.ones_like(rewards) if weights is None else weights
         actor_loss, critic_loss, td_errors = self._train_body(states, actions, next_states, rewards, done, weights)
         return td_errors
 

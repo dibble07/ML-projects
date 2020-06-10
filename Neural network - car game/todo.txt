@@ -1,9 +1,10 @@
 to do:
+overcome the boring areas trap
 
 environment features/physics:
 multiple cars
-make car an object
-need to move replay buffer and sampling inside agent
+	make car an object
+	need to move replay buffer and sampling inside agent
 
 race car/driver differences:
 sensing array - number, distribution, movement
