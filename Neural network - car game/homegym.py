@@ -63,11 +63,8 @@ class CarGameEnv:
 		self.vel_max = (self.forward_force/self.aero_drag_v2)**0.5
 		self.wheelbase = 3.7
 		self.steer_lock_ang = atan(self.wheelbase/30)
-		self.friction_coeff_track = 1.6
-		self.roll_res_coeff_track = 0.002
-		self.friction_coeff_gravel = 0.6
-		self.roll_res_coeff_gravel = 0.3
-		self.head_rot_max = 0
+		self.friction_coeff = 1.6
+		self.roll_res_coeff = 0.002
 		self.time_per_frame = 0.2
 		self.sz = (16, 32)
 		# misc
@@ -91,7 +88,7 @@ class CarGameEnv:
 				self.action_space = spaces.Box(-1, +1, (1,), dtype=np.float32)
 		else:
 			if self.sense_ang.size > 1:
-				self.actions_avail = [(1,0,0) , (-1,0,0), (0,0,0), (0,-1,0), (0,1,0)]
+				self.actions_avail = [(1,0) , (-1,0), (0,0), (0,-1), (0,1)]
 			else:
 				self.actions_avail = [(1,) , (-1,), (0,)]
 			self.action_space = spaces.Discrete(len(self.actions_avail))
@@ -101,7 +98,6 @@ class CarGameEnv:
 		self.frame_curr = 0
 		self.bear = 0
 		self.vel = 5
-		self.head_rot_ang = 0
 		self.lap_whole = 0
 		self.lap_float = None
 		self.lap_float_max = self.lap_float
@@ -114,36 +110,28 @@ class CarGameEnv:
 		self.pos_analyse()
 		self.score_analyse()
 		self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]]*self.loc_mem_sz
-		# self.dist_mem = [[dist/self.win_diag for dist in self.sense_dist]+[self.head_rot_ang/self.head_rot_max]]*self.loc_mem_sz
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 		return self.state
 
 	def step(self, action_in):
 		# calculate movements
-		if self.on_course == "full":
-			roll_res_coeff, friction_coeff = self.roll_res_coeff_track, self.friction_coeff_track
-		elif self.on_course == "partial":
-			roll_res_coeff, friction_coeff = self.roll_res_coeff_gravel, self.friction_coeff_gravel
 		dist = self.vel*self.time_per_frame
 		drag = self.aero_drag_v2*self.vel**2
 		downforce = self.aero_down_v2*self.vel**2 + self.mass*9.81
-		roll_res = downforce*roll_res_coeff
-		total_grip_avail = downforce*friction_coeff
+		roll_res = downforce*self.roll_res_coeff
+		total_grip_avail = downforce*self.friction_coeff
 		if self.continuous:
 			if len(action_in)==1:
-				act_for_aft, act_steer, act_head_rot = action_in[0], 0, 0
+				act_for_aft, act_steer = action_in[0], 0
 			else:
 				act_for_aft, act_steer = action_in
-				# act_for_aft, act_steer, act_head_rot = action_in
 		else:
 			action = self.actions_avail[action_in]
 			if len(action)==1:
-				act_for_aft, act_steer, act_head_rot = action[0], 0, 0
+				act_for_aft, act_steer = action[0], 0
 			else:
-				act_for_aft, act_steer, act_head_rot = action
-		metrics = [self.lap_float, act_for_aft, act_steer, 0, self.head_rot_ang, self.vel, total_grip_avail]
-		# metrics = [self.lap_float, act_for_aft, act_steer, act_head_rot, self.head_rot_ang, self.vel, total_grip_avail]
-		# self.head_rot_ang = act_head_rot*self.head_rot_max
+				act_for_aft, act_steer = action
+		metrics = [self.lap_float, act_for_aft, act_steer, self.vel, total_grip_avail]
 		long_force_max = min(self.forward_force, total_grip_avail) if act_for_aft >= 0 else -total_grip_avail
 		long_force = abs(act_for_aft)*long_force_max
 		self.vel = max(0,self.vel+(long_force - drag - roll_res)/self.mass*self.time_per_frame)
@@ -175,13 +163,11 @@ class CarGameEnv:
 		self.score_analyse()
 		reward = self.score-self.score_prev
 		# reward = 1 if self.score>self.score_prev else 0
-		if self.finished_course or self.on_course == "none" or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
+		if self.finished_course or not self.on_course or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
 			self.finished_episode = True
 		# update sensing history
 		del self.dist_mem[-1]
 		self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]] + self.dist_mem
-		# self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]+
-		# [self.head_rot_ang/self.head_rot_max]] + self.dist_mem
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
 		return self.state, reward, self.finished_episode, metrics
@@ -240,14 +226,7 @@ class CarGameEnv:
 	def pos_analyse(self):
 		# check on the course
 		car_poly = Polygon(self.hitbox_coords)
-		if self.outer_poly.contains(car_poly) and not self.inner_poly.intersects(car_poly):
-			self.on_course = "full"
-		elif (self.outer_poly.intersects(car_poly) and not self.outer_poly.contains(car_poly)) or (self.inner_poly.intersects(car_poly) and not self.inner_poly.contains(car_poly)):
-			self.on_course = "partial"
-		elif not self.outer_poly.intersects(car_poly) or self.inner_poly.contains(car_poly):
-			self.on_course = "none"
-		else:
-			self.on_course = "Error in on_course analysis"
+		self.on_course = self.outer_poly.contains(car_poly) and not self.inner_poly.intersects(car_poly)
 		# progress round track
 		car_loc = Point(self.hitbox_center)
 		self.track_prog = self.middle_lin.project(car_loc, normalized = True)
@@ -271,7 +250,7 @@ class CarGameEnv:
 		line_min = []
 		dist = 1000
 		for ang_sense in self.sense_ang:
-			angle = (ang_sense+self.bear+self.head_rot_ang)/180*pi
+			angle = (ang_sense+self.bear)/180*pi
 			line_dir = LineString([(x, y), (x+dist*sin(angle), y+dist*cos(angle))])
 			dist_angle_min = None
 			line_angle_min = None

@@ -28,14 +28,12 @@ def evaluate_policy(show):
 	done = False
 	while not done:
 		action = agent.get_action(obs, test=True)
-		next_obs, _, done, (laps, act_long, act_steer, act_head_rot, head_rot_ang, speed, grip, longitudinal_force, steering_angle) = test_env.step(action)
+		next_obs, _, done, (laps, act_long, act_steer, speed, grip, longitudinal_force, steering_angle) = test_env.step(action)
 		if show:
 			render_frames.append(test_env.render())
 			metrics_dict["laps"].append(laps)
 			metrics_dict["act_long"].append(act_long)
 			metrics_dict["act_steer"].append(act_steer)
-			metrics_dict["act_head_rot"].append(act_head_rot)
-			metrics_dict["head_rot_ang"].append(head_rot_ang)
 			metrics_dict["speed"].append(speed)
 			metrics_dict["grip"].append(grip)
 			metrics_dict["longitudinal_force"].append(longitudinal_force)
@@ -50,7 +48,6 @@ def display_episode(render, metrics, filedir):
 	# plot metrics
 	ax1[0].plot(metrics["laps"],metrics["act_long"], label="Fore-aft")
 	ax1[0].plot(metrics["laps"],metrics["act_steer"], label="Steer")
-	ax1[0].plot(metrics["laps"],metrics["act_head_rot"], label="Head")
 	ax1[0].set_ylabel("Actions [-]")
 	ax1[0].legend(loc="best")
 	ax1[1].plot(metrics["laps"],[x/1000 for x in metrics["grip"]], label="Grip")
@@ -58,10 +55,8 @@ def display_episode(render, metrics, filedir):
 	ax1[1].plot(metrics["laps"],[-x/1000 if x<0 else 0 for x in metrics["longitudinal_force"]], label="Braking")
 	ax1[1].set_ylabel("Forces [kN]")
 	ax1[1].legend(loc="best")
-	ax1[2].plot(metrics["laps"],[x*180/pi for x in metrics["steering_angle"]], label="Steer")
-	ax1[2].plot(metrics["laps"],[x for x in metrics["head_rot_ang"]], label="Head")
-	ax1[2].legend(loc="best")
-	ax1[2].set_ylabel("Angle [deg]")
+	ax1[2].plot(metrics["laps"],[x*180/pi for x in metrics["steering_angle"]])
+	ax1[2].set_ylabel("Steer angle [deg]")
 	ax1[3].plot(metrics["laps"],metrics["speed"])
 	ax1[3].set_ylabel("Speed [m/s]")
 	fig1.tight_layout()
@@ -75,7 +70,7 @@ def display_episode(render, metrics, filedir):
 # Define variables
 continuous = True
 use_prioritized_rb=True
-max_steps=1_500_000
+max_steps=500_000
 test_interval=500
 memory_capacity=100_000
 batch_size=64
@@ -87,12 +82,12 @@ if continuous:
 	agent = DDPG(
 		state_shape=env.observation_space.shape,
 		action_dim=env.action_space.high.size,
-		discount=0.95,
-		load_model="DDPG_08-51-22_0.56_229",
+		discount=0.99,
+		load_model=None,
 		actor_units=[64, 32],
 		critic_units=[64, 32],
 		sigma=0.1,
-		tau=0.00001,
+		tau=0.005,
 		max_action=env.action_space.high[0]
 		)
 else:
