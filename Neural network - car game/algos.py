@@ -201,21 +201,19 @@ class DDPG(tf.keras.Model):
         # Define and initialize Actor network
         if load_model is None:
             self.actor = Actor(action_dim, actor_units)
-            self.actor_target = Actor(action_dim, actor_units)
         else:
             self.actor = tf.keras.models.load_model(f"{load_model}/actor")
-            self.actor_target = tf.keras.models.load_model(f"{load_model}/actor")
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        self.actor_target = Actor(action_dim, actor_units)
+        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=self.tau)
         update_target_variables(self.actor_target.weights,self.actor.weights, tau=1.)
 
         # Define and initialize Critic network
         if load_model is None:
             self.critic = Critic(critic_units)
-            self.critic_target = Critic(critic_units)
         else:
             self.critic = tf.keras.models.load_model(f"{load_model}/critic")
-            self.critic_target = tf.keras.models.load_model(f"{load_model}/critic")
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        self.critic_target = Critic(critic_units)
+        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=self.tau)
         update_target_variables(self.critic_target.weights, self.critic.weights, tau=1.)
 
 

@@ -74,11 +74,11 @@ def display_episode(render, metrics, filedir):
 
 # Define variables
 continuous = True
-use_prioritized_rb=False
+use_prioritized_rb=True
 max_steps=1_500_000
 test_interval=500
 memory_capacity=100_000
-batch_size=256
+batch_size=64
 
 # Initialise environment, policy and replay buffer
 env = CarGameEnv(continuous)
@@ -87,10 +87,10 @@ if continuous:
 	agent = DDPG(
 		state_shape=env.observation_space.shape,
 		action_dim=env.action_space.high.size,
-		discount=0.99,
-		load_model=None,
-		actor_units=[128, 64],
-		critic_units=[128, 64],
+		discount=0.95,
+		load_model="DDPG_08-51-22_0.56_229",
+		actor_units=[64, 32],
+		critic_units=[64, 32],
 		sigma=0.1,
 		tau=0.00001,
 		max_action=env.action_space.high[0]
