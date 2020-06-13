@@ -1,9 +1,10 @@
+import cv2
 from gym import spaces
 from math import cos, sin, pi, tan, atan
 import numpy as np
 import random
 from PIL import Image
-import cv2
+import scipy.stats as st
 from shapely.geometry import Polygon, Point, LinearRing, LineString
 
 
@@ -50,10 +51,11 @@ class CarGameEnv:
 		self.outer_poly = Polygon(self.outer_coords)
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 		self.lap_length = self.middle_poly.length
-		print(self.lap_length)
 		# initialise car
-		self.sense_ang = np.array([0])
-		self.sense_ang = np.linspace(-90, 90, num=9, endpoint = True)
+		# scale = 2
+		# temp = 1-(1-st.norm.cdf(3, scale=scale))*2
+		# self.sense_ang = st.norm.ppf(1-(1-np.linspace(-temp, temp, num=9, endpoint=True))/2, scale=scale)*20
+		self.sense_ang = np.linspace(-90, 90, num=9, endpoint=True)
 		self.mass = 750
 		self.aero_drag_v2 = 0.5*1.225*1.3
 		self.aero_down_v2 = self.aero_drag_v2*2.5
@@ -62,6 +64,8 @@ class CarGameEnv:
 		self.wheelbase = 3.7
 		self.steer_lock_ang = atan(self.wheelbase/30)
 		self.friction_coeff = 1.6
+		self.roll_res_coeff = 0.002*0
+		print(f"roll_res_coeff = {self.roll_res_coeff}")
 		self.time_per_frame = 0.2
 		self.sz = (16, 32)
 		# misc
@@ -70,9 +74,8 @@ class CarGameEnv:
 		self.win_diag = (self.win_sz[0]**2+self.win_sz[1]**2)**0.5
 		self.patience = 10
 		self.lap_targ = 2
-		self.loc_mem_sz = 50
+		self.loc_mem_sz = 100
 		self.dist_mem_ind = list(range(0,10,2))
-		# self.dist_mem_ind = [0]
 		# reset
 		self.reset()
 		# spaces
@@ -115,8 +118,9 @@ class CarGameEnv:
 		# calculate movements
 		dist = self.vel*self.time_per_frame
 		drag = self.aero_drag_v2*self.vel**2
-		total_grip_avail = (self.aero_down_v2*self.vel**2 + self.mass*9.81)*self.friction_coeff
-		rotation = None
+		downforce = self.aero_down_v2*self.vel**2 + self.mass*9.81
+		roll_res = downforce*self.roll_res_coeff
+		total_grip_avail = downforce*self.friction_coeff
 		if self.continuous:
 			if len(action_in)==1:
 				act_for_aft, act_steer = action_in[0], 0
@@ -128,9 +132,10 @@ class CarGameEnv:
 				act_for_aft, act_steer = action[0], 0
 			else:
 				act_for_aft, act_steer = action
+		metrics = [self.lap_float, act_for_aft, act_steer, self.vel, total_grip_avail]
 		long_force_max = min(self.forward_force, total_grip_avail) if act_for_aft >= 0 else -total_grip_avail
 		long_force = abs(act_for_aft)*long_force_max
-		self.vel = max(0,self.vel+(long_force - drag)/self.mass*self.time_per_frame)
+		self.vel = max(0,self.vel+(long_force - drag - roll_res)/self.mass*self.time_per_frame)
 		turn_grip_avail = (total_grip_avail**2-long_force**2)**0.5
 		if act_steer != 0:
 			rot_sign = np.sign(act_steer)
@@ -145,13 +150,19 @@ class CarGameEnv:
 			steer_ang = abs(act_steer)*steer_ang_max
 			if steer_ang != 0:
 				rotation = (rot_sign, steer_ang)
+			else:
+				rotation = None
+		else:
+			rotation = None
+			steer_ang = 0
+
+		metrics = metrics + [long_force, steer_ang]
 
 		# implement movements and update scores and statuses
 		self.move(dist, rotation)
 		self.frame_curr +=1
 		self.score_analyse()
 		reward = self.score-self.score_prev
-		# reward = 1 if self.score>self.score_prev else 0
 		if self.finished_course or not self.on_course or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
 			self.finished_episode = True
 		# update sensing history
@@ -159,7 +170,7 @@ class CarGameEnv:
 		self.dist_mem = [[dist/self.win_diag if dist is not None else 0 for dist in self.sense_dist]] + self.dist_mem
 		self.state = np.append(np.array([self.dist_mem[i] for i in self.dist_mem_ind]).reshape(-1),[self.vel/self.vel_max])
 
-		return self.state, reward, self.finished_episode, {}
+		return self.state, reward, self.finished_episode, metrics
 
 	def score_analyse(self):
 		# calculate score
@@ -215,7 +226,7 @@ class CarGameEnv:
 	def pos_analyse(self):
 		# check on the course
 		car_poly = Polygon(self.hitbox_coords)
-		self.on_course = self.outer_poly.contains(car_poly) and not(self.inner_poly.intersects(car_poly))
+		self.on_course = self.outer_poly.contains(car_poly) and not self.inner_poly.intersects(car_poly)
 		# progress round track
 		car_loc = Point(self.hitbox_center)
 		self.track_prog = self.middle_lin.project(car_loc, normalized = True)
@@ -327,19 +338,7 @@ class CarGameEnv:
 
 		return self.viewer.render(return_rgb_array = True)
 
-# import time
-# environment = CarGameEnv(True)
-# action = [0,0]
-# while not environment.finished_episode:
-# 	state, __, __, __ = environment.step(action)
-# 	if state[1]>0.2:
-# 		action = [1.0, 0.0] 
-# 	elif state[1]<=0.2 and state[3]>0.2:
-# 		action = [-1.0, 0.0] 
-# 	elif state[1]<=0.2 and state[3]<=0.2 and state[2]-state[0]<=0.1:
-# 		action = [0.0, 0.0] 
-# 	elif state[1]<=0.2 and state[3]<=0.2 and state[2]-state[0]>0.1:
-# 		action = [0.0, 1.0] 
-# 	print(state, action)
-	# time.sleep(0.1)
-	# environment.render()
+	def close(self):
+		if self.viewer:
+			self.viewer.close()
+			self.viewer = None
