@@ -52,9 +52,9 @@ class CarGameEnv:
 		self.outer_lin = LinearRing(self.outer_poly.exterior.coords)
 		self.lap_length = self.middle_poly.length
 		# initialise car
-		# scale = 4
+		# scale = 2
 		# temp = 1-(1-st.norm.cdf(3, scale=scale))*2
-		# self.sense_ang = st.norm.ppf(1-(1-np.linspace(-temp, temp, num=9, endpoint=True))/2, scale=scale)*30
+		# self.sense_ang = st.norm.ppf(1-(1-np.linspace(-temp, temp, num=9, endpoint=True))/2, scale=scale)*20
 		self.sense_ang = np.linspace(-90, 90, num=9, endpoint=True)
 		self.mass = 750
 		self.aero_drag_v2 = 0.5*1.225*1.3
@@ -64,7 +64,8 @@ class CarGameEnv:
 		self.wheelbase = 3.7
 		self.steer_lock_ang = atan(self.wheelbase/30)
 		self.friction_coeff = 1.6
-		self.roll_res_coeff = 0.002
+		self.roll_res_coeff = 0.002*0
+		print(f"roll_res_coeff = {self.roll_res_coeff}")
 		self.time_per_frame = 0.2
 		self.sz = (16, 32)
 		# misc
@@ -73,7 +74,7 @@ class CarGameEnv:
 		self.win_diag = (self.win_sz[0]**2+self.win_sz[1]**2)**0.5
 		self.patience = 10
 		self.lap_targ = 2
-		self.loc_mem_sz = 50
+		self.loc_mem_sz = 100
 		self.dist_mem_ind = list(range(0,10,2))
 		# reset
 		self.reset()
@@ -162,7 +163,6 @@ class CarGameEnv:
 		self.frame_curr +=1
 		self.score_analyse()
 		reward = self.score-self.score_prev
-		# reward = 1 if self.score>self.score_prev else 0
 		if self.finished_course or not self.on_course or (self.frame_curr - self.lap_float_frame_max) >= self.patience:
 			self.finished_episode = True
 		# update sensing history
@@ -342,20 +342,3 @@ class CarGameEnv:
 		if self.viewer:
 			self.viewer.close()
 			self.viewer = None
-
-environment = CarGameEnv(True)
-# import time
-# action = [0.15,0.25,0]
-# while not environment.finished_episode:
-# 	state, __, __, __ = environment.step(action)
-# 	time.sleep(0.1)
-# 	environment.render()
-	# if state[1]>0.2:
-	# 	action = [1.0, 0.0] 
-	# elif state[1]<=0.2 and state[3]>0.2:
-	# 	action = [-1.0, 0.0] 
-	# elif state[1]<=0.2 and state[3]<=0.2 and state[2]-state[0]<=0.1:
-	# 	action = [0.0, 0.0] 
-	# elif state[1]<=0.2 and state[3]<=0.2 and state[2]-state[0]>0.1:
-	# 	action = [0.0, 1.0] 
-	# print(state, action)

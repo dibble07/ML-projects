@@ -70,7 +70,7 @@ def display_episode(render, metrics, filedir):
 # Define variables
 continuous = True
 use_prioritized_rb=True
-max_steps=500_000
+max_steps=5_000_000
 test_interval=500
 memory_capacity=100_000
 batch_size=64
@@ -83,9 +83,10 @@ if continuous:
 		state_shape=env.observation_space.shape,
 		action_dim=env.action_space.high.size,
 		discount=0.99,
-		load_model=None,
+		load_model="DDPG_12-01-38_2.00_281",
 		actor_units=[64, 32],
 		critic_units=[64, 32],
+		learning_rate = 0.001,
 		sigma=0.1,
 		tau=0.005,
 		max_action=env.action_space.high[0]
@@ -97,6 +98,7 @@ else:
 		discount=0.99,
 		load_model=None,
 		units=[16, 8],
+		learning_rate = 0.001,
 		enable_dueling_dqn=True,
 		target_replace_interval=300,
 		epsilon_init_step = 100_000,

@@ -49,7 +49,7 @@ class QFunc(tf.keras.Model):
 
 
 class DQN(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, units, target_replace_interval, enable_dueling_dqn,
+    def __init__(self, state_shape, action_dim, units, learning_rate, target_replace_interval, enable_dueling_dqn,
     discount, load_model, epsilon_init_step, epsilon_init, epsilon_final, epsilon_decay):
         super().__init__()
 
@@ -74,7 +74,7 @@ class DQN(tf.keras.Model):
         else:
             self.q_func = tf.keras.models.load_model(f"DQN_{load_model}")
             self.q_func_target = tf.keras.models.load_model(f"DQN_{load_model}")
-        self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        self.q_func_optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         update_target_variables(self.q_func_target.weights,self.q_func.weights, tau=1.)
 
     def get_action(self, state, test):
@@ -187,7 +187,7 @@ class Critic(tf.keras.Model):
 
 
 class DDPG(tf.keras.Model):
-    def __init__(self, state_shape, action_dim, max_action, actor_units, critic_units, sigma, tau, discount, load_model):
+    def __init__(self, state_shape, action_dim, max_action, actor_units, critic_units, learning_rate, sigma, tau, discount, load_model):
         super().__init__()
 
         # Assign variables
@@ -204,7 +204,7 @@ class DDPG(tf.keras.Model):
         else:
             self.actor = tf.keras.models.load_model(f"{load_model}/actor")
         self.actor_target = Actor(action_dim, actor_units)
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         update_target_variables(self.actor_target.weights,self.actor.weights, tau=1.)
 
         # Define and initialize Critic network
@@ -213,7 +213,7 @@ class DDPG(tf.keras.Model):
         else:
             self.critic = tf.keras.models.load_model(f"{load_model}/critic")
         self.critic_target = Critic(critic_units)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         update_target_variables(self.critic_target.weights, self.critic.weights, tau=1.)
 
 

@@ -2,13 +2,16 @@ to do:
 overcome the boring areas trap
 
 environment features/physics:
+add noise to sensing and actions
+heat turning
 multiple cars
 	make car an object
 	need to move replay buffer and sampling inside agent
+	move agent to car object
 
 race car/driver differences:
-sensing array - number, distribution, movement
-car parameters - weight, grip, turning radius, acceleration, top speed
+sensing array - number, distribution, movement, noise
+car parameters - weight, grip, turning radius, acceleration, top speed, action noise
 learning rate - tau
 memory - amount and distribution
 NN architecture
