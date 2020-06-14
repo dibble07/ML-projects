@@ -1,5 +1,7 @@
 to do:
-overcome the boring areas trap
+overcome the boring areas trap - Adaptive Symmetric Noise Rewarding
+write own  actor critic
+hyper parameter tuning
 
 environment features/physics:
 add noise to sensing and actions
