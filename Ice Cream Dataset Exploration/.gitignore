@@ -1,0 +1,9 @@
+# environment
+env/
+
+# data
+data/
+
+# binary files
+*.pdf
+*.pptx
