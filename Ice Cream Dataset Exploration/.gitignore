@@ -1,0 +1,12 @@
+# environment
+env/
+
+# data
+data/
+
+# cache file
+*.pyc
+.ipynb_checkpoints/
+
+# formatter config
+.pre-commit-config.yaml
