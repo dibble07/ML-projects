@@ -33,10 +33,5 @@ _N.B. some of these files are also present as `.html` files for easy sharing_
     - Aggregate shap values across the presence of multiple ingredients
 - Calculate uncertainty
     - Instead of aggregating across ingredient presence, regress to obtain confidence intervals
-
-## To do
-- update requirements file
-    - datavizml
-- create html file
-- update files table in readme
-- add units tests
+- Unit testing of custom functions
+    - String processing functions

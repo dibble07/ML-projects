@@ -4,10 +4,9 @@ env/
 # data
 data/
 
-# binary files
-*.pdf
-*.pptx
+# cache file
 *.pyc
+.ipynb_checkpoints/
 
-datavizml.py
+# formatter config
 .pre-commit-config.yaml
