@@ -26,7 +26,17 @@ _N.B. some of these files are also present as `.html` files for easy sharing_
     - Americanisms
     - Plurals
     - Multi-component ice creams - denoted by 'component1: ingredient, ingredient. component2: ingredient, ingredient'
+    - Optional prefix of "may" in allergen warnings
+- Weight rating average by number of reviews
+    - Extend (Laplace's rule of succession)[https://en.wikipedia.org/wiki/Rule_of_succession] to the 0-5 star rating system
+- Identify pairs of ingredients that are important
+    - Aggregate shap values across the presence of multiple ingredients
+- Calculate uncertainty
+    - Instead of aggregating across ingredient presence, regress to obtain confidence intervals
+
 ## To do
 - update requirements file
     - datavizml
+- create html file
 - update files table in readme
+- add units tests
