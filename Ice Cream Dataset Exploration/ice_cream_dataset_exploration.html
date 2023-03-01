@@ -36,6 +36,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 .highlight .m { color: var(--jp-mirror-editor-number-color) } /* Literal.Number */
 .highlight .s { color: var(--jp-mirror-editor-string-color) } /* Literal.String */
 .highlight .ow { color: var(--jp-mirror-editor-operator-color); font-weight: bold } /* Operator.Word */
+.highlight .pm { color: var(--jp-mirror-editor-punctuation-color) } /* Punctuation.Marker */
 .highlight .w { color: var(--jp-mirror-editor-variable-color) } /* Text.Whitespace */
 .highlight .mb { color: var(--jp-mirror-editor-number-color) } /* Literal.Number.Bin */
 .highlight .mf { color: var(--jp-mirror-editor-number-color) } /* Literal.Number.Float */
@@ -14464,10 +14465,6 @@ a.anchor-link {
   display: none;
 }
 
-.highlight  {
-  margin: 0.4em;
-}
-
 /* Input area styling */
 .jp-InputArea {
   overflow: hidden;
@@ -14477,9 +14474,26 @@ a.anchor-link {
   overflow: hidden;
 }
 
-.CodeMirror pre {
+.CodeMirror.cm-s-jupyter .highlight pre {
+/* weird, but --jp-code-padding defined to be 5px but 4px horizontal padding is hardcoded for pre.CodeMirror-line */
+  padding: var(--jp-code-padding) 4px;
   margin: 0;
-  padding: 0;
+
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+
+}
+
+.jp-OutputArea-output pre {
+  line-height: inherit;
+  font-family: inherit;
+}
+
+.jp-RenderedText pre {
+  color: var(--jp-content-font-color1);
+  font-size: var(--jp-code-font-size);
 }
 
 /* Using table instead of flexbox so that we can use break-inside property */
@@ -14523,6 +14537,10 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 /* Hiding the collapser by default */
 .jp-Collapser {
   display: none;
+}
+
+@page {
+    margin: 0.5in; /* Margin for each printed piece of paper */
 }
 
 @media print {
@@ -14611,7 +14629,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
@@ -14648,7 +14666,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># load from csv into pandas</span>
@@ -14671,12 +14689,12 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># show size, dtype and nullness of data</span>
@@ -14688,12 +14706,47 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+
+
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
+<pre>&lt;class &#39;pandas.core.frame.DataFrame&#39;&gt;
+RangeIndex: 241 entries, 0 to 240
+Data columns (total 8 columns):
+ #   Column        Non-Null Count  Dtype  
+---  ------        --------------  -----  
+ 0   brand         241 non-null    object 
+ 1   key           241 non-null    object 
+ 2   name          241 non-null    object 
+ 3   subhead       57 non-null     object 
+ 4   description   237 non-null    object 
+ 5   rating        241 non-null    float64
+ 6   rating_count  241 non-null    int64  
+ 7   ingredients   241 non-null    object 
+dtypes: float64(1), int64(1), object(6)
+memory usage: 15.2+ KB
+</pre>
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># show range and skew of numerical features</span>
@@ -14705,12 +14758,99 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[4]:</div>
+
+
+
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>rating</th>
+      <th>rating_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>241.000000</td>
+      <td>241.000000</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>4.223237</td>
+      <td>90.016598</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>0.620383</td>
+      <td>111.349449</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>1.200000</td>
+      <td>2.000000</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>4.000000</td>
+      <td>28.000000</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>4.400000</td>
+      <td>59.000000</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>4.700000</td>
+      <td>112.000000</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>5.000000</td>
+      <td>983.000000</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># display random sample of data</span>
@@ -14722,12 +14862,175 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
+
+
+
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>brand</th>
+      <th>key</th>
+      <th>name</th>
+      <th>subhead</th>
+      <th>description</th>
+      <th>rating</th>
+      <th>rating_count</th>
+      <th>ingredients</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>24</th>
+      <td>bj</td>
+      <td>24_bj</td>
+      <td>Coffee Toffee Bar Crunch</td>
+      <td>Coffee Ice Cream with Fudge-Covered Toffee Pieces</td>
+      <td>Coffee What Bar Crunch?  We gave this flavor a...</td>
+      <td>2.9</td>
+      <td>302</td>
+      <td>CREAM, SKIM MILK, LIQUID SUGAR (SUGAR, WATER),...</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>bj</td>
+      <td>6_bj</td>
+      <td>Berry Sweet Mascarpone</td>
+      <td>Blackberry &amp; Mascarpone Ice Creams with Shortb...</td>
+      <td>From the sweet blackberry and crazy creamy mas...</td>
+      <td>4.6</td>
+      <td>10</td>
+      <td>CREAM, SKIM MILK, WATER, LIQUID SUGAR (SUGAR, ...</td>
+    </tr>
+    <tr>
+      <th>222</th>
+      <td>breyers</td>
+      <td>50_breyers</td>
+      <td>Non-Dairy OREO® Cookies &amp; Cream</td>
+      <td>NaN</td>
+      <td>Love ice cream but can’t stomach the dairy? Ha...</td>
+      <td>4.5</td>
+      <td>157</td>
+      <td>ALMOND MILK, WATER, ALMONDS, LIQUID SUGAR, SUG...</td>
+    </tr>
+    <tr>
+      <th>208</th>
+      <td>breyers</td>
+      <td>36_breyers</td>
+      <td>CarbSmart™ Vanilla Bar</td>
+      <td>NaN</td>
+      <td>Watching your grams of sugar or carbs? Try our...</td>
+      <td>4.2</td>
+      <td>24</td>
+      <td>MILK, COCONUT OIL, WATER, MALTITOL SYRUP, SUGA...</td>
+    </tr>
+    <tr>
+      <th>236</th>
+      <td>breyers</td>
+      <td>64_breyers</td>
+      <td>CINNABON®</td>
+      <td>NaN</td>
+      <td>Calling all cinnamon roll lovers! We teamed up...</td>
+      <td>4.0</td>
+      <td>28</td>
+      <td>MILK, CORN SYRUP, SUGAR, BROWN SUGAR, SOYBEAN ...</td>
+    </tr>
+    <tr>
+      <th>173</th>
+      <td>breyers</td>
+      <td>1_breyers</td>
+      <td>Homemade Vanilla</td>
+      <td>NaN</td>
+      <td>Breyers® Homemade Vanilla ice cream is thick a...</td>
+      <td>4.4</td>
+      <td>98</td>
+      <td>MILK, CREAM, SUGAR, CORN SYRUP, WHEY, EGG YOLK...</td>
+    </tr>
+    <tr>
+      <th>197</th>
+      <td>breyers</td>
+      <td>25_breyers</td>
+      <td>No Sugar Added Vanilla Chocolate Strawberry</td>
+      <td>NaN</td>
+      <td>Vanilla. Chocolate. Strawberry. All in one!? A...</td>
+      <td>4.3</td>
+      <td>34</td>
+      <td>MILK, MALTITOL SYRUP, MALTODEXTRIN (CORN), CRE...</td>
+    </tr>
+    <tr>
+      <th>220</th>
+      <td>breyers</td>
+      <td>48_breyers</td>
+      <td>Cookies &amp; Cream</td>
+      <td>NaN</td>
+      <td>Take a milk and cookie break. Dive into Breyer...</td>
+      <td>4.1</td>
+      <td>22</td>
+      <td>MILK, SUGAR, CORN SYRUP, CREAM, WHEAT FLOUR, P...</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>bj</td>
+      <td>9_bj</td>
+      <td>Boots on the Moooo’n™</td>
+      <td>A Universe of Milk Chocolate Ice Cream with Fu...</td>
+      <td>While Space Force works to get boots (back) on...</td>
+      <td>4.7</td>
+      <td>42</td>
+      <td>CREAM, LIQUID SUGAR (SUGAR, WATER), SKIM MILK,...</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>hd</td>
+      <td>56_hd</td>
+      <td>Strawberry Waffle Cone HEAVEN Light Ice Cream</td>
+      <td>NaN</td>
+      <td>Introducing new HEAVEN Strawberry Waffle Cone ...</td>
+      <td>4.2</td>
+      <td>18</td>
+      <td>CANE SUGAR, SKIM MILK, STRAWBERRIES, CREAM, CH...</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[6]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># check if Ben and Jerry&#39;s is the only brand to populate subhead</span>
@@ -14739,12 +15042,78 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
+
+
+
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>subhead</th>
+    </tr>
+    <tr>
+      <th>brand</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>bj</th>
+      <td>57</td>
+    </tr>
+    <tr>
+      <th>breyers</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>hd</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>talenti</th>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[7]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># drop columns with no value - &#39;key&#39; is just for joining to other datasets and &#39;subhead&#39; is minimally populated</span>
@@ -14854,7 +15223,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[8]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># function to clean and split ingredients</span>
@@ -14893,7 +15262,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[9]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># convert ingredients to list from comma separated string</span>
@@ -14907,12 +15276,12 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[10]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># display all ingredients to check tokenisation</span>
@@ -14922,6 +15291,349 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
      </div>
 </div>
 </div>
+</div>
+
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[10]:</div>
+
+
+
+
+<div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
+<pre>{&#39;ACESULFAME POTASSIUM&#39;,
+ &#39;ALMOND EXTRACT&#39;,
+ &#39;ALMOND MILK&#39;,
+ &#39;ALMONDS&#39;,
+ &#39;ALMONDS ROASTED IN VEGETABLE OIL&#39;,
+ &#39;ANNATTO&#39;,
+ &#39;APPLE JUICE&#39;,
+ &#39;ARTIFICIAL FLAVOR&#39;,
+ &#39;ARTIFICIAL FLAVORING&#39;,
+ &#39;ARTIFICIAL FLAVORS&#39;,
+ &#39;BAKING POWDER&#39;,
+ &#39;BAKING SODA&#39;,
+ &#39;BANANA PUREE&#39;,
+ &#39;BANANAS&#39;,
+ &#39;BARLEY MALT&#39;,
+ &#39;BEET JUICE&#39;,
+ &#39;BELGIAN CHOCOLATE&#39;,
+ &#39;BLACK CARROT CONCENTRATES&#39;,
+ &#39;BLACK CHERRIES&#39;,
+ &#39;BLACK RASPBERRIES&#39;,
+ &#39;BLACK RASPBERRY PUREE&#39;,
+ &#39;BLEACHED WHEAT FLOUR&#39;,
+ &#39;BLUE 1&#39;,
+ &#39;BLUE 1 LAKE&#39;,
+ &#39;BLUE 2&#39;,
+ &#39;BLUE 2 LAKE&#39;,
+ &#39;BLUEBERRIES&#39;,
+ &#39;BOURBON&#39;,
+ &#39;BROWN SUGAR&#39;,
+ &#39;BUTTER&#39;,
+ &#39;BUTTER OIL&#39;,
+ &#39;BUTTEROIL&#39;,
+ &#39;CALCIUM CARBONATE&#39;,
+ &#39;CANE SUGAR&#39;,
+ &#39;CANOLA OIL&#39;,
+ &#39;CARAMEL&#39;,
+ &#39;CARAMEL COLOR&#39;,
+ &#39;CARAMEL FLAVOR&#39;,
+ &#39;CARAMEL ICE CREAM&#39;,
+ &#39;CARAMEL SWIRL&#39;,
+ &#39;CARAMELIZED SUGAR&#39;,
+ &#39;CARAMELIZED SUGAR SYRUP&#39;,
+ &#39;CAROB BEAN&#39;,
+ &#39;CAROB BEAN GUM&#39;,
+ &#39;CAROB GUM&#39;,
+ &#39;CARRAGEENAN&#39;,
+ &#39;CARROT JUICE CONCENTRATE&#39;,
+ &#39;CARROT POWDER&#39;,
+ &#39;CELLULOSE GUM&#39;,
+ &#39;CHEESE CULTURES&#39;,
+ &#39;CHERRIES&#39;,
+ &#39;CHERRY&#39;,
+ &#39;CHERRY JUICE CONCENTRATE&#39;,
+ &#39;CHERRY PUREE&#39;,
+ &#39;CHOCOLATE&#39;,
+ &#39;CHOCOLATE CHIP COOKIES&#39;,
+ &#39;CHOCOLATE COOKIE PIECES&#39;,
+ &#39;CHOCOLATE FLAVORED COATING&#39;,
+ &#39;CHOCOLATE ICE CREAM&#39;,
+ &#39;CHOCOLATE LIQUOR&#39;,
+ &#39;CHOCOLATE PROCESSED WITH ALKALI&#39;,
+ &#39;CHOCOLATEY CHIPS&#39;,
+ &#39;CHOCOLATEY COATED PEANUTS&#39;,
+ &#39;CHOCOLATY COATED CONE PIECES&#39;,
+ &#39;CHOCOLATY COATING&#39;,
+ &#39;CINNAMON&#39;,
+ &#39;CITRIC ACID&#39;,
+ &#39;COCOA&#39;,
+ &#39;COCOA BUTTER&#39;,
+ &#39;COCOA POWDER&#39;,
+ &#39;COCOA PROCESSED WITH ALKALI&#39;,
+ &#39;COCONUT&#39;,
+ &#39;COCONUT CONCENTRATE&#39;,
+ &#39;COCONUT CREAM&#39;,
+ &#39;COCONUT EXTRACT&#39;,
+ &#39;COCONUT OIL&#39;,
+ &#39;COFFEE&#39;,
+ &#39;COFFEE EXTRACT&#39;,
+ &#39;COFFEE EXTRACT CONCENTRATE&#39;,
+ &#39;COFFEE ICE CREAM&#39;,
+ &#39;COLOR ADDED&#39;,
+ &#39;CONDENSED MILK&#39;,
+ &#39;CONDENSED SKIM MILK&#39;,
+ &#39;CONE PIECES&#39;,
+ &#39;CORN MALTODEXTRIN&#39;,
+ &#39;CORN OIL&#39;,
+ &#39;CORN STARCH&#39;,
+ &#39;CORN SYRUP&#39;,
+ &#39;CORN SYRUP SOLIDS&#39;,
+ &#39;CORNSTARCH&#39;,
+ &#39;COTTONSEED OIL&#39;,
+ &#39;CREAM&#39;,
+ &#39;CREAM CHEESE&#39;,
+ &#39;CREAM OF TARTAR&#39;,
+ &#39;DARK CHOCOLATE&#39;,
+ &#39;DESICCATED COCONUT&#39;,
+ &#39;DEXTRIN&#39;,
+ &#39;DEXTROSE&#39;,
+ &#39;DIGLYCERIDES&#39;,
+ &#39;DRIED APPLES&#39;,
+ &#39;DRIED CANE SYRUP&#39;,
+ &#39;DUTCHED COCOA&#39;,
+ &#39;EGG&#39;,
+ &#39;EGG WHITES&#39;,
+ &#39;EGG YOLK&#39;,
+ &#39;EGG YOLKS&#39;,
+ &#39;EGGS&#39;,
+ &#39;ENRICHED FLOUR&#39;,
+ &#39;ENRICHED WHEAT FLOUR&#39;,
+ &#39;ENZYMES&#39;,
+ &#39;ERYTHRITOL&#39;,
+ &#39;EVAPORATED MILK&#39;,
+ &#39;EXPELLER PRESSED SOYBEAN OIL&#39;,
+ &#39;FOLIC ACID&#39;,
+ &#39;FRUCTOSE&#39;,
+ &#39;FUDGE SWIRL&#39;,
+ &#39;GLYCERIN&#39;,
+ &#39;GRAHAM FLOUR&#39;,
+ &#39;GRAPE JUICE CONCENTRATE&#39;,
+ &#39;GREEN TEA&#39;,
+ &#39;GROUND VANILLA BEANS&#39;,
+ &#39;GUAR&#39;,
+ &#39;GUAR GUM&#39;,
+ &#39;HAZELNUTS&#39;,
+ &#39;HEATH TOFFEE BAR PIECES&#39;,
+ &#39;HIBISCUS FLOWER&#39;,
+ &#39;HIBISCUS POWDER&#39;,
+ &#39;HIGH FRUCTOSE CORN SYRUP&#39;,
+ &#39;HONEY&#39;,
+ &#39;INGREDIENTS&#39;,
+ &#39;INVERT CANE SUGAR&#39;,
+ &#39;INVERT SUGAR&#39;,
+ &#39;LACTASE&#39;,
+ &#39;LACTASE ENZYME&#39;,
+ &#39;LACTIC ACID&#39;,
+ &#39;LACTOSE&#39;,
+ &#39;LACTOSE REDUCED SKIM MILK&#39;,
+ &#39;LEAVENING&#39;,
+ &#39;LEMON JUICE&#39;,
+ &#39;LEMON JUICE CONCENTRATE&#39;,
+ &#39;LEMON PEEL&#39;,
+ &#39;LIME JUICE CONCENTRATE&#39;,
+ &#39;LIQUID SUGAR&#39;,
+ &#39;LOCUST BEAN&#39;,
+ &#39;LOCUST BEAN GUM&#39;,
+ &#34;M&amp;M&#39;S MINIS MILK CHOCOLATE CANDIES WITH COCOA BUTTER&#34;,
+ &#39;MALTED BARLEY FLOUR&#39;,
+ &#39;MALTITOL&#39;,
+ &#39;MALTITOL SYRUP&#39;,
+ &#39;MALTODEXTRIN&#39;,
+ &#39;MANGO&#39;,
+ &#39;MANGO PUREE&#39;,
+ &#39;MANGOS&#39;,
+ &#39;MAY&#39;,
+ &#39;MILK&#39;,
+ &#39;MILK CHOCOLATE&#39;,
+ &#39;MILK CHOCOLATE CANDIES&#39;,
+ &#39;MILK FAT&#39;,
+ &#39;MILK PROTEIN CONCENTRATE&#39;,
+ &#39;MILKFAT&#39;,
+ &#39;MINT LEAF EXTRACTIVES&#39;,
+ &#39;MODIFIED CORN STARCH&#39;,
+ &#39;MODIFIED FOOD STARCH&#39;,
+ &#39;MOLASSES&#39;,
+ &#39;MONO&#39;,
+ &#39;MONOCALCIUM PHOSPHATE&#39;,
+ &#39;NATURAL FLAVOR&#39;,
+ &#39;NATURAL FLAVORS&#39;,
+ &#39;NIACIN&#39;,
+ &#39;NONFAT DRY MILK&#39;,
+ &#39;NONFAT MILK&#39;,
+ &#39;NONFAT MILK SOLIDS&#39;,
+ &#39;NUTMEG&#39;,
+ &#39;OAKWOOD EXTRACT&#39;,
+ &#39;OATS&#39;,
+ &#39;OR CALCIUM PHOSPHATE&#39;,
+ &#39;OR CANOLA OIL&#39;,
+ &#39;ORANGE JUICE&#39;,
+ &#39;ORANGE JUICE CONCENTRATE&#39;,
+ &#39;OREO COOKIE PIECES&#39;,
+ &#39;ORGANIC BLACK COCOA PROCESSED WITH ALKALI&#39;,
+ &#39;ORGANIC BUTTER&#39;,
+ &#39;ORGANIC CANE SUGAR&#39;,
+ &#39;ORGANIC CAROB BEAN GUM&#39;,
+ &#39;ORGANIC CHOCOLATE&#39;,
+ &#39;ORGANIC COCOA PROCESSED WITH ALKALI&#39;,
+ &#39;ORGANIC CREAM&#39;,
+ &#39;ORGANIC DEXTROSE&#39;,
+ &#39;ORGANIC EGG WHITES&#39;,
+ &#39;ORGANIC GINGER&#39;,
+ &#39;ORGANIC GREEN TEA&#39;,
+ &#39;ORGANIC LEMON JUICE CONCENTRATE&#39;,
+ &#39;ORGANIC MATCHA GREEN TEA&#39;,
+ &#39;ORGANIC MILK&#39;,
+ &#39;ORGANIC SKIM MILK&#39;,
+ &#39;ORGANIC VANILLA EXTRACT&#39;,
+ &#39;PALM&#39;,
+ &#39;PALM KERNEL OIL&#39;,
+ &#39;PALM OIL&#39;,
+ &#39;PASTEURIZED EGGS&#39;,
+ &#39;PASTEURIZED MILK&#39;,
+ &#39;PEA PROTEIN&#39;,
+ &#39;PEACHES&#39;,
+ &#39;PEANUT BUTTER FROZEN DESSERT&#39;,
+ &#39;PEANUT EXTRACT&#39;,
+ &#39;PEANUT FLOUR&#39;,
+ &#39;PEANUT OIL&#39;,
+ &#39;PEANUTS&#39;,
+ &#39;PECANS&#39;,
+ &#39;PECTIN&#39;,
+ &#39;PEPPERMINT EXTRACT&#39;,
+ &#39;PGPR&#39;,
+ &#39;PINEAPPLE&#39;,
+ &#39;PISTACHIO PASTE&#39;,
+ &#39;PISTACHIOS&#39;,
+ &#39;PLUM&#39;,
+ &#39;POLYDEXTROSE&#39;,
+ &#39;POTASSIUM SORBATE&#39;,
+ &#39;POTATO&#39;,
+ &#39;POTATO FLOUR&#39;,
+ &#39;POWDERED SUGAR&#39;,
+ &#39;PROCESSED VANILLA BEANS&#39;,
+ &#39;PUMPKIN&#39;,
+ &#39;PUMPKIN JUICE CONCENTRATE&#39;,
+ &#39;RAISINS&#39;,
+ &#39;RASPBERRIES&#39;,
+ &#39;RASPBERRY PUREE&#39;,
+ &#39;RASPBERRY PUREE CONCENTRATE&#39;,
+ &#39;RASPBERRY SWIRL&#39;,
+ &#39;REB A&#39;,
+ &#39;RED 40&#39;,
+ &#39;RED 40 LAKE&#39;,
+ &#39;RED CABBAGE JUICE&#39;,
+ &#39;RED CABBAGE JUICE CONCENTRATE&#39;,
+ &#39;REDUCED IRON&#39;,
+ &#34;REESE&#39;S PEANUT BUTTER CUP PIECES&#34;,
+ &#34;REESE&#39;S PEANUT BUTTER CUPS&#34;,
+ &#39;RIBOFLAVIN&#39;,
+ &#39;RICE FLOUR&#39;,
+ &#39;RICE STARCH&#39;,
+ &#39;ROASTED ALMONDS&#39;,
+ &#39;ROASTED PEANUTS&#39;,
+ &#39;ROASTED PISTACHIOS&#39;,
+ &#39;ROLLED OATS&#39;,
+ &#39;RUM&#39;,
+ &#39;SAFFLOWER OIL&#39;,
+ &#39;SALT&#39;,
+ &#39;SEA SALT&#39;,
+ &#39;SEMI-SWEET CHOCOLATE CHUNKS&#39;,
+ &#39;SKIM MILK&#39;,
+ &#39;SKIM MILK POWDER&#39;,
+ &#39;SNICKERS PIECES*&#39;,
+ &#39;SODIUM ACID PYROPHOSPHATE&#39;,
+ &#39;SODIUM BICARBONATE&#39;,
+ &#39;SODIUM CASEINATE&#39;,
+ &#39;SOLUBLE CORN FIBER&#39;,
+ &#39;SORBITOL&#39;,
+ &#39;SOY LECITHIN&#39;,
+ &#39;SOY LECITHIN NATURAL FLAVOR&#39;,
+ &#39;SOYBEAN&#39;,
+ &#39;SOYBEAN LECITHIN&#39;,
+ &#39;SOYBEAN OIL&#39;,
+ &#39;SOYBEAN OILS&#39;,
+ &#39;SPICE&#39;,
+ &#39;SPICES&#39;,
+ &#39;STRAWBERRIES&#39;,
+ &#39;STRAWBERRY SWIRL&#39;,
+ &#39;SUCRALOSE&#39;,
+ &#39;SUGAR&#39;,
+ &#39;SUNFLOWER LECITHIN&#39;,
+ &#39;SUNFLOWER OIL&#39;,
+ &#39;SUNFLOWER OILS&#39;,
+ &#39;SWEETENED CONDENSED MILK&#39;,
+ &#39;SWEETENED CONDENSED SKIM MILK&#39;,
+ &#39;TAPIOCA FLOUR&#39;,
+ &#39;TAPIOCA STARCH&#39;,
+ &#39;TAPIOCA SYRUP&#39;,
+ &#39;TARA&#39;,
+ &#39;TARA GUM&#39;,
+ &#39;THIAMIN MONONITRATE&#39;,
+ &#39;THIAMINE MONONITRATE&#39;,
+ &#39;TOFFEE&#39;,
+ &#39;ULCE DE LECHE ICE CREAM&#39;,
+ &#39;UNBLEACHED ENRICHED FLOUR&#39;,
+ &#39;UNBLEACHED ENRICHED WHEAT FLOUR&#39;,
+ &#39;UNBLEACHED UNENRICHED WHEAT FLOUR&#39;,
+ &#39;UNSWEETENED CHOCOLATE&#39;,
+ &#39;VANILLA BEAN SEEDS&#39;,
+ &#39;VANILLA BEANS&#39;,
+ &#39;VANILLA EXTRACT&#39;,
+ &#39;VANILLA ICE CREAM&#39;,
+ &#39;VANILLIN&#39;,
+ &#39;VEGETABLE GUM&#39;,
+ &#39;VEGETABLE GUMS&#39;,
+ &#39;VEGETABLE JUICE&#39;,
+ &#39;VEGETABLE JUICE CONCENTRATE COLOR&#39;,
+ &#39;VEGETABLE OIL&#39;,
+ &#39;VEGETABLE OIL COATING&#39;,
+ &#39;VEGETABLE OIL COATING WITH PEPPERMINT CANDY PIECES&#39;,
+ &#39;VERMOUTH&#39;,
+ &#39;VITAMIN A PALMITATE&#39;,
+ &#39;WAFFLE CONE PIECES&#39;,
+ &#39;WATER&#39;,
+ &#39;WEET CREAM ICE CREAM&#39;,
+ &#39;WHEAT BRAN&#39;,
+ &#39;WHEAT FLOUR&#39;,
+ &#39;WHEAT GERM&#39;,
+ &#39;WHEY&#39;,
+ &#39;WHEY PROTEIN CONCENTRATE&#39;,
+ &#39;WHITE CHOCOLATE ICE CREAM&#39;,
+ &#39;WHOLE EGG&#39;,
+ &#39;WHOLE EGGS&#39;,
+ &#39;WHOLE MILK POWDER&#39;,
+ &#39;WHOLE WHEAT GRAHAM FLOUR&#39;,
+ &#39;WINE&#39;,
+ &#39;XANTHAN GUM&#39;,
+ &#39;YEAST EXTRACT&#39;,
+ &#39;YELLOW 5&#39;,
+ &#39;YELLOW 5 LAKE&#39;,
+ &#39;YELLOW 6&#39;,
+ &#39;YELLOW 6 LAKE&#39;}</pre>
+</div>
+
+</div>
+
+</div>
+
 </div>
 
 </div>
@@ -14947,7 +15659,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[11]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># vectorise ingredients</span>
@@ -14985,7 +15697,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[12]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># initialise and fit KNN regressor</span>
@@ -15027,7 +15739,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[13]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># set summary of data for baseline and sample instances to examine shap values of</span>
@@ -15041,12 +15753,12 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[14]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># calculate shap values</span>
@@ -15064,12 +15776,35 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+
+
+
+
+<div class="jp-RenderedText jp-OutputArea-output " data-mime-type="text/plain">
+<pre>  0%|          | 0/241 [00:00&lt;?, ?it/s]</pre>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[15]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># calculate the impact of not having an ingredient vs having it</span>
@@ -15114,12 +15849,12 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[16]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># identify most significant ingredients</span>
@@ -15156,6 +15891,235 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
      </div>
 </div>
 </div>
+</div>
+
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[16]:</div>
+
+
+
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead tr th {
+        text-align: left;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th colspan="2" halign="left">include</th>
+      <th colspan="2" halign="left">exclude</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>ingredient</th>
+      <th>rating_impact</th>
+      <th>ingredient</th>
+      <th>rating_impact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>GROUND VANILLA BEANS</td>
+      <td>0.312090</td>
+      <td>COFFEE EXTRACT</td>
+      <td>-0.538640</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CORN MALTODEXTRIN</td>
+      <td>0.148824</td>
+      <td>ALMONDS ROASTED IN VEGETABLE OIL</td>
+      <td>-0.474480</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ALMOND EXTRACT</td>
+      <td>0.140012</td>
+      <td>PEACHES</td>
+      <td>-0.419044</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>VEGETABLE OIL COATING WITH PEPPERMINT CANDY PI...</td>
+      <td>0.095291</td>
+      <td>GREEN TEA</td>
+      <td>-0.257568</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>VANILLA ICE CREAM</td>
+      <td>0.089470</td>
+      <td>RAISINS</td>
+      <td>-0.244939</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CELLULOSE GUM</td>
+      <td>0.078063</td>
+      <td>SAFFLOWER OIL</td>
+      <td>-0.186223</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>COFFEE</td>
+      <td>0.068902</td>
+      <td>CHOCOLATEY CHIPS</td>
+      <td>-0.161376</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>REESE'S PEANUT BUTTER CUPS</td>
+      <td>0.066774</td>
+      <td>SORBITOL</td>
+      <td>-0.152173</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>NATURAL FLAVORS</td>
+      <td>0.063554</td>
+      <td>STRAWBERRY SWIRL</td>
+      <td>-0.132021</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>WHITE CHOCOLATE ICE CREAM</td>
+      <td>0.062250</td>
+      <td>MALTITOL</td>
+      <td>-0.122513</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>BANANA PUREE</td>
+      <td>0.061505</td>
+      <td>THIAMINE MONONITRATE</td>
+      <td>-0.121594</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>CARAMEL ICE CREAM</td>
+      <td>0.059187</td>
+      <td>PLUM</td>
+      <td>-0.116741</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>MAY</td>
+      <td>0.058439</td>
+      <td>RUM</td>
+      <td>-0.110008</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>BLACK RASPBERRY PUREE</td>
+      <td>0.053391</td>
+      <td>CHOCOLATE ICE CREAM</td>
+      <td>-0.109763</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>MINT LEAF EXTRACTIVES</td>
+      <td>0.052169</td>
+      <td>CHOCOLATY COATING</td>
+      <td>-0.108546</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>UNSWEETENED CHOCOLATE</td>
+      <td>0.051120</td>
+      <td>BLACK CARROT CONCENTRATES</td>
+      <td>-0.105629</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>PINEAPPLE</td>
+      <td>0.050919</td>
+      <td>CREAM</td>
+      <td>-0.099057</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>POTATO FLOUR</td>
+      <td>0.049872</td>
+      <td>REDUCED IRON</td>
+      <td>-0.097257</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>PISTACHIO PASTE</td>
+      <td>0.047354</td>
+      <td>NIACIN</td>
+      <td>-0.084432</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>ORANGE JUICE CONCENTRATE</td>
+      <td>0.046761</td>
+      <td>LACTASE ENZYME</td>
+      <td>-0.080488</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>TOFFEE</td>
+      <td>0.045876</td>
+      <td>VANILLA EXTRACT</td>
+      <td>-0.079722</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>MANGO</td>
+      <td>0.045229</td>
+      <td>DUTCHED COCOA</td>
+      <td>-0.078747</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>CONDENSED MILK</td>
+      <td>0.044976</td>
+      <td>LEMON PEEL</td>
+      <td>-0.077631</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>PEANUT EXTRACT</td>
+      <td>0.042063</td>
+      <td>ORANGE JUICE</td>
+      <td>-0.074323</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>DRIED APPLES</td>
+      <td>0.041257</td>
+      <td>LACTASE</td>
+      <td>-0.071182</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+
 </div>
 
 </div>
