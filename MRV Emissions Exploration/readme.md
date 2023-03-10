@@ -27,3 +27,7 @@ _N.B. some of these files are also present as `.html` files for easy sharing_
 - Investigate potential insights in columns with lots of missing data
     - Beware of response bias if these fields are not mandatory
     - Understanding a vessel's utilisation rate could be very useful
+
+## To do
+- Rerun EDA after [datavizml bug](https://github.com/dibble07/datavizml/issues/98) has been fixed
+- Reduce tick density in some plots
