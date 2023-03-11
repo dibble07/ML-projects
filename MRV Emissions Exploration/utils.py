@@ -38,17 +38,11 @@ def log2_fun(frame_lin):
 # decorate axis in log style
 def decorate_log_axis(axis, direction):
     if direction == "y":
-        lim_min, lim_max = axis.get_ylim()
         sub_axis = axis.yaxis
     elif direction == "x":
-        lim_min, lim_max = axis.get_xlim()
         sub_axis = axis.xaxis
-    tick_range = np.arange(np.floor(lim_min), np.ceil(lim_max))
-    sub_axis.set_ticks(tick_range)
-    sub_axis.set_ticks(
-        [np.log2(x) for p in tick_range for x in np.linspace(2**p, 2 ** (p + 1), 2)],
-        minor=True,
-    )  # add minor log ticks
+    sub_axis.set_minor_locator(ticker.MaxNLocator(integer=True))
+    sub_axis.set_major_locator(ticker.MaxNLocator(5, integer=True))
     sub_axis.set_major_formatter(ticker.StrMethodFormatter("$2^{{{x:.0f}}}$"))
 
 

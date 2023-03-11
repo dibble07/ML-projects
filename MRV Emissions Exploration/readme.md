@@ -35,4 +35,3 @@ _N.B. some of these files are also present as `.html` files for easy sharing_
     - Plot cluster center and size as bubbles
 
 ## To do
-- Reduce tick density in some plots
