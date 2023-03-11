@@ -27,6 +27,12 @@ _N.B. some of these files are also present as `.html` files for easy sharing_
 - Investigate potential insights in columns with lots of missing data
     - Beware of response bias if these fields are not mandatory
     - Understanding a vessel's utilisation rate could be very useful
+- Convert to standalone interactive dashboard that can be hosted as web applicable to democratise acess
+    - [Voila](https://voila.readthedocs.io/en/stable/) would be well suited
+    - Add additional interactive filters (incl/excl ships by year, type, efficiency etc) for end-users to customise
+- Replace scatter plot of ship type median speed vs time with bubble plot
+    - Use DBScan clustering to aggregate data points into fewer groups for each ship type
+    - Plot cluster center and size as bubbles
 
 ## To do
 - Rerun EDA after [datavizml bug](https://github.com/dibble07/datavizml/issues/98) has been fixed
