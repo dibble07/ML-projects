@@ -43,3 +43,5 @@ _N.B. some of these files are also present as `.html` files for easy sharing_
         - Percentage error
 
 ## To do
+Address that regression is predicting log 2 of values
+- review "#### Evaluate impact of time" down
