@@ -277,7 +277,7 @@ def grouped_plot(df):
 
 
 # calculate confidence interval for model coefficients
-def coef_ci(X, res, model, alpha=0.05):
+def coef_ci(X, y, model, alpha=0.05):
     # combine coefficients and intercept
     coefs = np.insert(model.coef_, 0, model.intercept_)
 
@@ -290,6 +290,7 @@ def coef_ci(X, res, model, alpha=0.05):
     t_val = stats.t.isf(alpha / 2, dof)
 
     # MSE of residuals
+    res = y - model.predict(X)
     mse = np.sum(res**2) / dof
 
     # inverse of the variance of the parameters
