@@ -1,0 +1,2 @@
+datavizml>=1.9.4
+openpyxl
