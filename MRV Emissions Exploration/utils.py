@@ -2,6 +2,7 @@ from matplotlib import ticker
 import numpy as np
 import pandas as pd
 import re
+from scipy.cluster.hierarchy import dendrogram
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler
 import unittest
@@ -125,3 +126,24 @@ class test_transformer(unittest.TestCase):
 
         # assert on values
         self.assertTrue(X_out.equals(X_out_correct))
+
+
+# plot structure of hierarchical model
+def dendrogram_from_model(model, **kwargs):
+    # create linkage matrix and then plot the dendrogram
+    counts = np.zeros(model.children_.shape[0])
+    n_samples = len(model.labels_)
+    for i, merge in enumerate(model.children_):
+        current_count = 0
+        for child_idx in merge:
+            if child_idx < n_samples:
+                current_count += 1  # leaf node
+            else:
+                current_count += counts[child_idx - n_samples]
+        counts[i] = current_count
+    linkage_matrix = np.column_stack(
+        [model.children_, model.distances_, counts]
+    ).astype(float)
+
+    # plot the corresponding dendrogram
+    dendrogram(linkage_matrix, **kwargs)
