@@ -265,7 +265,11 @@ def grouped_plot(df):
     no_cols = min(no_params, 4)
     no_rows = int(np.ceil(no_params / no_cols))
     fig, ax_all = plt.subplots(
-        ncols=no_cols, nrows=no_rows, figsize=(18, no_rows * 3), squeeze=False
+        ncols=no_cols,
+        nrows=no_rows,
+        sharey=True,
+        figsize=(18, no_rows * 3),
+        squeeze=False,
     )
 
     # loop through all groups
