@@ -33,5 +33,13 @@ _N.B. some of these files are also present as `.html` files for easy sharing_
 - Replace scatter plot of ship type median speed vs time with bubble plot
     - Use DBScan clustering to aggregate data points into fewer groups for each ship type
     - Plot cluster center and size as bubbles
+- Improve regression analysis
+    - Overfitting is not a problem so could consider models with higher variance to reduce loss
+        - Decision trees
+        - Boosted ensemble methods
+        - Neural networks
+    - Acquire feature around ship size (deadweight, length, volume, displacement etc) not originating from target variable
+    - Consider different scoring approach to address range of target values
+        - Percentage error
 
 ## To do
