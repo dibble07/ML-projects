@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "marketing optimisation"
+version = "0.1.0"
+description = "To build a model to predict whether a marketing call from a loan company would be profitable or not, and subsequently use that model to optimise a marketing call strategy"
+authors = ["Robert Dibble <robertdibble@live.co.uk>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12.0"
+deap = "^1"
+ipykernel = "^6"
+joblib = "^1"
+matplotlib = "^3"
+numpy = "^1"
+pandas = "^1"
+protobuf = "<=3.20"
+scikeras = {version = "^0", extras = ["tensorflow"]}
+scikit-learn = "1.1.3"
+seaborn = "^0"
+statsmodels = "^0"
+tensorflow-macos = "2.9"
+tensorflow-metal = "0.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
